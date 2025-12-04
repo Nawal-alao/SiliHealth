@@ -1,0 +1,39 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "healid", schema "public" at "localhost:5433"
+
+Applying migration `20251124005225_init`
+Applying migration `20251202022449_role_separation_uuid`
+Applying migration `20251202023511_fix_created_at_column`
+Applying migration `20251202110831_add_medical_entities`
+Applying migration `20251202164839_add_qr_emergency_consultation_tables`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20251124005225_init/
+    └─ migration.sql
+  └─ 20251202022449_role_separation_uuid/
+    └─ migration.sql
+  └─ 20251202023511_fix_created_at_column/
+    └─ migration.sql
+  └─ 20251202110831_add_medical_entities/
+    └─ migration.sql
+  └─ 20251202164839_add_qr_emergency_consultation_tables/
+    └─ migration.sql
+Applying migration `20251203182346_init`
+
+
+The following migration(s) have been created and applied from new schema changes:
+
+migrations/
+  └─ 20251203182346_init/
+    └─ migration.sql
+
+Your database is now in sync with your schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (v5.22.0) to ./node_modules/@prisma/client in 1.81s
+
+

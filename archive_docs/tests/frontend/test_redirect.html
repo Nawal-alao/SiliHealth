@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Redirections HealID</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; border: none; }
+        .btn-secondary { background: #6c757d; color: white; border: none; }
+        .result { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test des Redirections HealID</h1>
+
+    <div class="test-section info">
+        <h3>Instructions</h3>
+        <p>Cette page teste les redirections après inscription et connexion.</p>
+        <p>Ouvrez la console du navigateur (F12) pour voir les logs de redirection.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>1. Test Inscription Patient</h3>
+        <button class="btn-primary" onclick="testSignupPatient()">Inscrire un Patient Test</button>
+        <div id="signup-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Test Connexion</h3>
+        <button class="btn-primary" onclick="testLogin()">Se Connecter</button>
+        <div id="login-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Test Redirections Automatiques</h3>
+        <button class="btn-secondary" onclick="testAutoRedirect()">Tester Redirections</button>
+        <div id="redirect-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. État Actuel</h3>
+        <button class="btn-secondary" onclick="showCurrentState()">Voir État</button>
+        <div id="state-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:4000';
+        const TOKEN_KEY = 'healid_token';
+        const USER_KEY = 'healid_user';
+
+        async function testSignupPatient() {
+            const resultDiv = document.getElementById('signup-result');
+            resultDiv.innerHTML = 'Inscription en cours...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        firstName: 'Test',
+                        lastName: 'Patient',
+                        email: `test.patient.${Date.now()}@example.com`,
+                        password: 'SecurePass123',
+                        role: 'patient',
+                        sexAtBirth: 'F',
+                        birthDate: '1995-05-15',
+                        consentForDataProcessing: true
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.ok) {
+                    resultDiv.innerHTML = `<div class="success">✅ Inscription réussie: ${data.user.email}</div>`;
+                    console.log('Inscription réussie:', data);
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Échec inscription: ${data.error || 'Erreur inconnue'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erreur réseau: ${error.message}</div>`;
+            }
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.innerHTML = 'Connexion en cours...';
+
+            // Simuler la logique de connexion du formulaire
+            const email = 'alice.test.final@example.com'; // Utiliser un compte existant
+            const password = 'SecurePass123';
+
+            try {
+                console.log('Tentative de connexion pour:', email);
+                const response = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.ok) {
+                    resultDiv.innerHTML = `<div class="success">✅ Connexion réussie - Rôle: ${data.user.role}</div>`;
+                    console.log('Connexion réussie:', data);
+
+                    // Simuler ce que fait le JavaScript après connexion
+                    localStorage.setItem(TOKEN_KEY, data.token);
+                    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+
+                    const userRole = data.user.role;
+                    const redirectUrl = userRole === 'patient' ? '/dashboard-patient' : '/dashboard-agent';
+
+                    resultDiv.innerHTML += `<br><div class="info">🔄 Redirection programmée vers: ${redirectUrl}</div>`;
+                    console.log('Redirection programmée vers:', redirectUrl);
+
+                    // Simuler la redirection après délai
+                    setTimeout(() => {
+                        console.log('Redirection exécutée vers:', redirectUrl);
+                        // window.location.href = redirectUrl; // Commenté pour le test
+                        resultDiv.innerHTML += `<br><div class="success">✅ Redirection exécutée vers: ${redirectUrl}</div>`;
+                    }, 500);
+
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Échec connexion: ${data.error || 'Identifiants invalides'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erreur réseau: ${error.message}</div>`;
+            }
+        }
+
+        function testAutoRedirect() {
+            const resultDiv = document.getElementById('redirect-result');
+            resultDiv.innerHTML = 'Test des redirections automatiques...';
+
+            const token = localStorage.getItem(TOKEN_KEY);
+            const userData = localStorage.getItem(USER_KEY);
+
+            if (!token || !userData) {
+                resultDiv.innerHTML = `<div class="error">❌ Aucun utilisateur connecté</div>`;
+                return;
+            }
+
+            try {
+                const user = JSON.parse(userData);
+                const currentPath = window.location.pathname;
+
+                resultDiv.innerHTML = `<div class="info">Utilisateur: ${user.email} (${user.role})</div>`;
+                resultDiv.innerHTML += `<div class="info">Page actuelle: ${currentPath}</div>`;
+
+                // Simuler la logique de checkRoleBasedAccess
+                if (user.role === 'patient') {
+                    resultDiv.innerHTML += `<div class="success">✅ Patient - accès autorisé à cette page</div>`;
+                } else if (user.role === 'agent_de_sante') {
+                    resultDiv.innerHTML += `<div class="success">✅ Agent - accès autorisé à cette page</div>`;
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erreur: ${error.message}</div>`;
+            }
+        }
+
+        function showCurrentState() {
+            const resultDiv = document.getElementById('state-result');
+
+            const token = localStorage.getItem(TOKEN_KEY);
+            const userData = localStorage.getItem(USER_KEY);
+
+            let html = '<div class="info"><strong>État actuel:</strong></div>';
+
+            if (token) {
+                html += '<div class="success">✅ Token présent</div>';
+            } else {
+                html += '<div class="error">❌ Pas de token</div>';
+            }
+
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    html += `<div class="success">✅ Utilisateur: ${user.email} (${user.role})</div>`;
+                } catch (e) {
+                    html += '<div class="error">❌ Données utilisateur corrompues</div>';
+                }
+            } else {
+                html += '<div class="error">❌ Pas de données utilisateur</div>';
+            }
+
+            html += `<div class="info">📍 Page actuelle: ${window.location.pathname}</div>`;
+
+            resultDiv.innerHTML = html;
+        }
+
+        // Test automatique au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page de test chargée - HealID');
+            showCurrentState();
+        });
+    </script>
+</body>
+</html>

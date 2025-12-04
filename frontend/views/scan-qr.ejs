@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Scanner QR Code - HealID</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/frontend/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+    <style>
+      .qr-scanner-container {
+        max-width: 500px;
+        margin: 40px auto;
+        padding: 24px;
+        border-radius: 12px;
+        background: #f9fafb;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+      }
+      
+      #qr-video {
+        width: 100%;
+        max-width: 400px;
+        border-radius: 8px;
+        border: 2px solid #2563eb;
+        display: none;
+      }
+      
+      .qr-controls {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+        flex-wrap: wrap;
+      }
+      
+      .qr-info {
+        background: #eff6ff;
+        border-left: 4px solid #2563eb;
+        padding: 16px;
+        border-radius: 8px;
+        margin-top: 16px;
+        display: none;
+      }
+      
+      .qr-info.success {
+        background: #f0fdf4;
+        border-left-color: #16a34a;
+      }
+      
+      .qr-info.error {
+        background: #fef2f2;
+        border-left-color: #dc2626;
+      }
+      
+      .patient-info {
+        background: white;
+        border: 1px solid #e5e7eb;
+        padding: 16px;
+        border-radius: 8px;
+        margin-top: 16px;
+        display: none;
+      }
+      
+      .patient-info h4 {
+        margin-top: 0;
+        color: #1f2937;
+      }
+      
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      
+      .info-row:last-child {
+        border-bottom: none;
+      }
+      
+      .info-label {
+        font-weight: 600;
+        color: #6b7280;
+      }
+      
+      .info-value {
+        color: #1f2937;
+      }
+      
+      .login-required {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 16px;
+        border-radius: 8px;
+        margin-top: 16px;
+        display: none;
+      }
+      
+      .login-required h5 {
+        margin-top: 0;
+        color: #92400e;
+      }
+      
+      .login-required p {
+        color: #78350f;
+        margin: 8px 0;
+      }
+      
+      .login-required .btn {
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <%- include('partials/header') %>
+    
+    <main id="content" class="site">
+      <div class="qr-scanner-container">
+        <h2 style="margin-top: 0;">📱 Scanner QR Code Patient</h2>
+        <p class="muted">Scannez le QR code du patient pour accéder à ses informations de base. Une connexion est requise pour voir l'historique complet.</p>
+        
+        <video id="qr-video" playsinline></video>
+        
+        <div class="qr-controls">
+          <button type="button" class="btn" onclick="startScanning()" id="start-btn">Démarrer le scanner</button>
+          <button type="button" class="btn" style="background: #ef4444; border-color: #ef4444; display:none;" onclick="stopScanning()" id="stop-btn">Arrêter</button>
+        </div>
+        
+        <div class="qr-info" id="qr-status"></div>
+        
+        <!-- Informations patient scannées -->
+        <div class="patient-info" id="patient-info">
+          <h4>📋 Informations Patient</h4>
+          <div class="info-row">
+            <span class="info-label">ID Patient :</span>
+            <span class="info-value" id="info-patient-id">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Nom :</span>
+            <span class="info-value" id="info-patient-name">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Date de naissance :</span>
+            <span class="info-value" id="info-patient-dob">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Email :</span>
+            <span class="info-value" id="info-patient-email">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Dernier accès :</span>
+            <span class="info-value" id="info-patient-last-access">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Statut :</span>
+            <span class="info-value" id="info-patient-status">-</span>
+          </div>
+        </div>
+        
+        <!-- Message : connexion requise -->
+        <div class="login-required" id="login-required">
+          <h5>🔒 Accès complet nécessite une connexion</h5>
+          <p>Pour voir l'historique complet des consultations, des accès et du suivi médical, vous devez d'abord vous connecter ou créer un compte.</p>
+          <a class="btn" style="display: inline-block;" href="/login">Se connecter</a>
+          <a class="btn" style="display: inline-block; background: #059669; border-color: #059669; margin-left: 8px;" href="/signup">Créer un compte</a>
+        </div>
+      </div>
+    </main>
+    
+    <%- include('partials/footer') %>
+    
+    <script>
+      const API_BASE = 'http://localhost:4000';
+      let stream = null;
+      let scanning = false;
+      
+      async function startScanning() {
+        try {
+          const video = document.getElementById('qr-video');
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' },
+            audio: false 
+          });
+          
+          video.srcObject = stream;
+          video.style.display = 'block';
+          document.getElementById('start-btn').style.display = 'none';
+          document.getElementById('stop-btn').style.display = 'inline-block';
+          
+          scanning = true;
+          processQRCode(video);
+          
+          showStatus('Scanner actif... Approchez le QR code', 'info');
+        } catch (err) {
+          showStatus('❌ Erreur d\'accès à la caméra : ' + err.message, 'error');
+        }
+      }
+      
+      function stopScanning() {
+        scanning = false;
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+        document.getElementById('qr-video').style.display = 'none';
+        document.getElementById('start-btn').style.display = 'inline-block';
+        document.getElementById('stop-btn').style.display = 'none';
+        showStatus('Scanner arrêté', 'info');
+      }
+      
+      function processQRCode(video) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function scan() {
+          if (!scanning) return;
+          
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (code) {
+              handleQRCode(code.data);
+              scanning = false;
+              stopScanning();
+              return;
+            }
+          }
+          
+          requestAnimationFrame(scan);
+        }
+        
+        scan();
+      }
+      
+      async function handleQRCode(qrData) {
+        try {
+          showStatus('⏳ Vérification du QR code...', 'info');
+          
+          // Validation du format du QR code
+            if (!qrData.startsWith('HEALID_')) {
+            showStatus('❌ QR code invalide (format non reconnu)', 'error');
+            return;
+          }
+          
+          // Extraction de l'ID patient
+            const patientId = qrData.replace('HEALID_', '');
+          
+          // Validation de l'ID (doit être numérique)
+          if (!/^\d+$/.test(patientId)) {
+            showStatus('❌ QR code invalide (ID patient incorrect)', 'error');
+            return;
+          }
+          
+          // Appel à l'API backend pour récupérer les infos du patient
+          const response = await fetch(`${API_BASE}/api/qr-verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              patientId,
+              timestamp: new Date().toISOString(),
+              userAgent: navigator.userAgent
+            })
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            showStatus('❌ ' + (error.message || 'Erreur lors de la vérification'), 'error');
+            return;
+          }
+          
+          const data = await response.json();
+          
+          if (!data.ok) {
+            showStatus('❌ ' + (data.error || 'Patient non trouvé'), 'error');
+            return;
+          }
+          
+          // Affichage des informations du patient
+          displayPatientInfo(data.patient);
+          showStatus('✓ QR code valide et vérifié avec succès', 'success');
+          showLoginRequired();
+          
+        } catch (err) {
+          console.error('Erreur:', err);
+          showStatus('❌ Erreur : ' + err.message, 'error');
+        }
+      }
+      
+      function displayPatientInfo(patient) {
+        document.getElementById('info-patient-id').textContent = patient.id || '-';
+        document.getElementById('info-patient-name').textContent = patient.fullname || patient.name || '-';
+        document.getElementById('info-patient-dob').textContent = patient.dob || '-';
+        document.getElementById('info-patient-email').textContent = patient.email || '-';
+        document.getElementById('info-patient-last-access').textContent = patient.lastAccess || 'Pas d\'accès récent';
+        document.getElementById('info-patient-status').textContent = patient.status === 'active' ? '✓ Actif' : '⏸ Inactif';
+        
+        document.getElementById('patient-info').style.display = 'block';
+      }
+      
+      function showLoginRequired() {
+        document.getElementById('login-required').style.display = 'block';
+      }
+      
+      function showStatus(message, type) {
+        const status = document.getElementById('qr-status');
+        status.textContent = message;
+        status.className = `qr-info ${type}`;
+        status.style.display = 'block';
+      }
+    </script>
+  </body>
+</html>

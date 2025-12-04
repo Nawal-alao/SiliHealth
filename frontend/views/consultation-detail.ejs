@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" role="main" class="site">
+    <div class="card">
+      <h3>Fiche de consultation — Jane Doe</h3>
+      <p class="muted">Date: 2025-10-02 — Médecin: Dr. Martin</p>
+      <section style="margin-top:12px">
+        <h4>Informations médicales</h4>
+        <p class="muted">Antécédents, observations cliniques, notes détaillées.</p>
+      </section>
+      <section style="margin-top:12px">
+        <h4>Upload de résultats complémentaires</h4>
+        <div class="uploader card-compact">
+          <label>Uploader résultats
+            <input type="file" accept="image/*,application/pdf" onchange="previewFiles(this,'#preview')" class="input">
+          </label>
+          <div id="preview" class="preview"></div>
+        </div>
+      </section>
+      <section style="margin-top:12px">
+        <h4>Commentaires / Notes du médecin</h4>
+        <div class="card-compact">Aucune note supplémentaire.</div>
+      </section>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+</html>

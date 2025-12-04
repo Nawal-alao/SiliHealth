@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" role="main" class="site">
+    <div class="layout">
+      <nav class="sidebar" aria-label="Navigation principale">
+        <a class="nav-item active" href="/dashboard-patient" aria-current="page">Mon Espace</a>
+        <a class="nav-item" href="/profil-patient">Mon Profil</a>
+        <a class="nav-item" href="/consultations">Mes Consultations</a>
+        <a class="nav-item" href="/pregnancy">Suivi Grossesse</a>
+        <a class="nav-item" href="/system-settings">Paramètres</a>
+      </nav>
+      <div class="main">
+        <div class="grid">
+          <div class="card">
+            <h4>Prochains rendez-vous</h4>
+            <p class="muted">Aucun rendez-vous programmé pour le moment.</p>
+          </div>
+          <div class="card">
+            <h4>Historique des consultations</h4>
+            <p class="muted">Consultez vos dernières consultations médicales.</p>
+          </div>
+          <div class="card">
+            <h4>Documents médicaux</h4>
+            <p class="muted">Accédez à vos ordonnances, comptes rendus et résultats d'examens.</p>
+          </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <section style="margin-top:18px" class="card">
+          <h3>Mon QR Code Santé</h3>
+          <div style="padding:16px; text-align: center;">
+            <div id="qr-code-container" style="margin-bottom: 16px;">
+              <p class="muted">Chargement du QR code...</p>
+            </div>
+            <p class="muted" style="font-size: 13px;">
+              Ce QR code permet aux professionnels de santé d'accéder à vos informations vitales en cas d'urgence.
+            </p>
+            <div style="margin-top: 12px;">
+              <a id="qr-access-url" href="#" target="_blank" class="btn btn--secondary" style="font-size: 12px;">
+                Lien d'accès direct
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section style="margin-top:18px" class="card">
+          <h3>Mes informations médicales</h3>
+          <div style="padding:16px">
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+              <div style="padding:12px; background: var(--soft); border-radius: 8px;">
+                <strong>Taille:</strong> <span id="height-display">-</span>
+              </div>
+              <div style="padding:12px; background: var(--soft); border-radius: 8px;">
+                <strong>Poids:</strong> <span id="weight-display">-</span>
+              </div>
+              <div style="padding:12px; background: var(--soft); border-radius: 8px;">
+                <strong>IMC:</strong> <span id="bmi-display">-</span>
+              </div>
+              <div style="padding:12px; background: var(--soft); border-radius: 8px;">
+                <strong>Groupe sanguin:</strong> <span id="blood-type-display">-</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Allergies Section -->
+        <section style="margin-top:18px" class="card">
+          <h3>Allergies</h3>
+          <div style="padding:16px">
+            <div id="allergies-display" class="muted">Aucune allergie enregistrée</div>
+          </div>
+        </section>
+
+        <!-- Vaccinations Section -->
+        <section style="margin-top:18px" class="card">
+          <h3>Vaccinations</h3>
+          <div style="padding:16px">
+            <div id="vaccinations-display" class="muted">Aucune vaccination enregistrée</div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+
+  <script>
+    const API_BASE = 'http://localhost:4000';
+    const TOKEN_KEY = 'healid_token';
+
+    // Charger les données du patient
+    document.addEventListener('DOMContentLoaded', async function() {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+
+      try {
+        // Charger le profil patient
+        const profileResponse = await fetch(`${API_BASE}/api/patients/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          if (profileData.ok && profileData.patient) {
+            const patient = profileData.patient;
+            
+            // Afficher les informations médicales de base
+            document.getElementById('height-display').textContent = patient.heightCm ? `${patient.heightCm} cm` : 'Non renseigné';
+            document.getElementById('weight-display').textContent = patient.weightKg ? `${patient.weightKg} kg` : 'Non renseigné';
+            document.getElementById('bmi-display').textContent = patient.bmi ? patient.bmi.toFixed(1) : 'Non calculé';
+            document.getElementById('blood-type-display').textContent = patient.bloodType || 'Non renseigné';
+
+            // Afficher les allergies
+            if (patient.allergies) {
+              const allergies = formatMedicalData(patient.allergies);
+              document.getElementById('allergies-display').innerHTML = allergies || '<span class="muted">Aucune allergie enregistrée</span>';
+            }
+
+            // Afficher les vaccinations
+            if (patient.vaccinations) {
+              const vaccinations = formatMedicalData(patient.vaccinations);
+              document.getElementById('vaccinations-display').innerHTML = vaccinations || '<span class="muted">Aucune vaccination enregistrée</span>';
+            }
+
+            // Charger et afficher le QR code
+            await loadPatientQRCode(patient.patientId);
+          }
+        } else if (profileResponse.status === 401) {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem('healid_user');
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des données:', error);
+      }
+    });
+
+    // Charger le QR code du patient
+    async function loadPatientQRCode(patientId) {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const qrContainer = document.getElementById('qr-code-container');
+      const qrUrlLink = document.getElementById('qr-access-url');
+
+      try {
+        // Construire l'URL du QR code
+        const qrUrl = `${window.location.origin}/qr-access/${patientId}`;
+        
+        // Afficher le QR code en utilisant le générateur
+        if (window.QRCodeGenerator && window.QRCodeGenerator.renderToElement) {
+          // Wrapper container avec style
+          const wrapper = document.createElement('div');
+          wrapper.style.display = 'inline-block';
+          wrapper.style.padding = '20px';
+          wrapper.style.background = 'white';
+          wrapper.style.borderRadius = '12px';
+          wrapper.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+          
+          qrContainer.innerHTML = '';
+          qrContainer.appendChild(wrapper);
+          
+          // Générer le QR code
+          await window.QRCodeGenerator.renderToElement(qrUrl, wrapper, 200);
+          
+          // Afficher l'ID du patient
+          const infoDiv = document.createElement('p');
+          infoDiv.style.marginTop = '12px';
+          infoDiv.style.fontSize = '12px';
+          infoDiv.style.color = 'var(--muted)';
+          infoDiv.textContent = `ID: ${patientId.substring(0, 8)}...`;
+          wrapper.appendChild(infoDiv);
+        } else {
+          // Fallback si QRCodeGenerator n'est pas disponible
+          qrContainer.innerHTML = `
+            <div style="display: inline-block; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+              <div style="width: 200px; height: 200px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                <div style="text-align: center; color: var(--muted);">
+                  <div style="font-size: 48px; margin-bottom: 8px;">📱</div>
+                  <div style="font-size: 12px;">QR Code</div>
+                </div>
+              </div>
+              <p style="margin-top: 12px; font-size: 12px; color: var(--muted);">ID: ${patientId.substring(0, 8)}...</p>
+            </div>
+          `;
+        }
+
+        // Lien d'accès direct
+        if (qrUrlLink) {
+          qrUrlLink.href = qrUrl;
+          qrUrlLink.textContent = qrUrl;
+        }
+      } catch (error) {
+        console.error('Erreur chargement QR:', error);
+        qrContainer.innerHTML = '<p class="muted">Erreur lors du chargement du QR code.</p>';
+      }
+    }
+
+    // Formater les données médicales (allergies, vaccinations, etc.)
+    function formatMedicalData(data) {
+      if (!data) return null;
+      
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch (e) {
+          return data;
+        }
+      }
+
+      if (Array.isArray(data)) {
+        return '<ul style="margin: 0; padding-left: 20px;">' + 
+          data.map(item => {
+            if (typeof item === 'object') {
+              const name = item.name || item.medication || item.vaccine || item.condition || JSON.stringify(item);
+              const date = item.date ? ` (${new Date(item.date).toLocaleDateString('fr-FR')})` : '';
+              return `<li>${name}${date}</li>`;
+            }
+            return `<li>${item}</li>`;
+          }).join('') + 
+          '</ul>';
+      }
+
+      return JSON.stringify(data);
+    }
+  </script>
+</html>

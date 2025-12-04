@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" role="main" class="site">
+    <div class="layout">
+      <nav class="sidebar" aria-label="Navigation principale">
+        <a class="nav-item active" href="/dashboard" aria-current="page">Dashboard</a>
+        <a class="nav-item" href="/consultations">Consultations</a>
+        <a class="nav-item" href="/pregnancy">Grossesse</a>
+        <a class="nav-item" href="/patient-record">Dossiers</a>
+        <a class="nav-item" href="/access-history">Sécurité</a>
+        <a class="nav-item" href="/system-settings">Paramètres</a>
+      </nav>
+      <div class="main">
+        <div class="grid">
+          <div class="card"><h4>Consultations récentes</h4><p class="muted">Aperçu rapide des dernières consultations.</p></div>
+          <div class="card"><h4>Activité</h4><p class="muted">Connexions, téléchargements et modifications.</p></div>
+          <div class="card"><h4>Raccourci</h4><p class="muted">Bouton rapide pour créer une consultation.</p>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <a class="btn btn--primary" href="/consultation-new">Créer une consultation</a>
+              <a class="btn btn--accent" href="/scan-qr">Scanner QR</a>
+            </div>
+          </div>
+        </div>
+        <section style="margin-top:18px" class="card"><h3>Graphiques</h3><canvas id="dashboard-chart" style="height:160px;max-height:160px;"></canvas></section>
+        <!-- Scanner modal trigger and container -->
+        <div id="scanner-modal" class="card" style="margin-top:18px; display:none;" role="dialog" aria-label="Scanner QR Code" aria-hidden="true">
+          <h3>Scanner QR (Modal)</h3>
+          <div style="padding:12px">
+            <video id="modal-qr-video" playsinline style="width:100%;border-radius:8px;display:none;border:2px solid var(--accent)"></video>
+            <div style="margin-top:10px;display:flex;gap:8px">
+              <button type="button" class="btn" id="modal-start" aria-label="Démarrer le scanner">Démarrer le scanner</button>
+              <button type="button" class="btn" id="modal-stop" aria-label="Arrêter le scanner" style="background:#ef4444;border-color:#ef4444;display:none">Arrêter</button>
+            </div>
+            <div id="modal-qr-status" style="margin-top:12px;color:var(--muted)"></div>
+            <div id="modal-patient-info" style="display:none;margin-top:12px;background:var(--card);padding:12px;border-radius:8px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const ctx = document.getElementById('dashboard-chart');
+      if (ctx) {
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'],
+            datasets: [{
+              label: 'Consultations',
+              data: [12, 19, 15, 25, 22, 30],
+              borderColor: 'rgb(107, 140, 255)',
+              backgroundColor: 'rgba(107, 140, 255, 0.1)',
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      }
+    });
+  </script>
+</html>

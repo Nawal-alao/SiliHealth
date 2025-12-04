@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" class="site">
+    <div class="card" style="max-width:720px">
+      <h3>Paramètres du système</h3>
+      <p class="muted">Personnalisez votre expérience : thème, notifications et langue. Les changements se prévisualisent immédiatement et sont sauvegardés localement.</p>
+
+      <form id="system-settings-form" data-validate>
+        <div class="form-row">
+          <label for="theme-select">Apparence</label>
+          <div class="muted">Choisissez le thème de l'interface (clair / sombre).</div>
+          <select id="theme-select" class="input">
+            <option value="light">Clair</option>
+            <option value="dark">Sombre</option>
+            <option value="system">Suivre le système</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="notif-select">Notifications</label>
+          <div class="muted">Recevoir des alertes et notifications dans l'interface.</div>
+          <select id="notif-select" class="input">
+            <option value="on">Activées</option>
+            <option value="off">Désactivées</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="lang-select">Langue</label>
+          <div class="muted">Langue de l'interface.</div>
+          <select id="lang-select" class="input">
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button id="save-settings" type="button" class="btn">Enregistrer</button>
+          <span id="settings-save-status" class="muted" style="margin-left:12px;display:none">Enregistré</span>
+        </div>
+      </form>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+</html>

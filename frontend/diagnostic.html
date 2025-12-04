@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic HealID</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1000px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; border: none; }
+        .btn-secondary { background: #6c757d; color: white; border: none; }
+        .result { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 3px; font-family: monospace; font-size: 12px; }
+        .form-test { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Diagnostic HealID</h1>
+
+    <div class="section info">
+        <h3>Instructions</h3>
+        <p>Cette page diagnostique tous les composants du système HealID.</p>
+        <p>Ouvrez la console (F12) pour voir les logs détaillés.</p>
+    </div>
+
+    <div class="section">
+        <h3>1. État des Services</h3>
+        <button class="btn-primary" onclick="checkServices()">Vérifier Services</button>
+        <div id="services-result" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>2. JavaScript & Formulaires</h3>
+        <button class="btn-primary" onclick="checkJavaScript()">Vérifier JavaScript</button>
+        <div id="js-result" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>3. Test Formulaire Connexion</h3>
+        <div class="form-test">
+            <form id="test-login-form" data-validate data-api="/api/login" method="post">
+                <input type="email" name="email" value="alice.test.final@example.com" placeholder="Email" required>
+                <input type="password" name="password" value="SecurePass123" placeholder="Mot de passe" required>
+                <button type="submit">Tester Connexion</button>
+            </form>
+        </div>
+        <div id="form-result" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>4. État LocalStorage</h3>
+        <button class="btn-secondary" onclick="checkLocalStorage()">Vérifier LocalStorage</button>
+        <div id="storage-result" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>5. Actions de Debug</h3>
+        <button class="btn-secondary" onclick="clearStorage()">Vider LocalStorage</button>
+        <button class="btn-secondary" onclick="openConsole()">Ouvrir Console</button>
+        <div id="debug-result" class="result"></div>
+    </div>
+
+    <script>
+        // Simuler les fonctions du main.js pour le diagnostic
+        const API_BASE = 'http://localhost:4000';
+        const TOKEN_KEY = 'healid_token';
+        const USER_KEY = 'healid_user';
+
+        async function checkServices() {
+            const resultDiv = document.getElementById('services-result');
+            resultDiv.innerHTML = 'Vérification en cours...';
+
+            const checks = [
+                { name: 'Frontend (Port 3000)', url: 'http://localhost:3000/', method: 'HEAD' },
+                { name: 'Backend API (Port 4000)', url: 'http://localhost:4000/api/health', method: 'GET' },
+                { name: 'Page Login', url: 'http://localhost:3000/login', method: 'HEAD' },
+                { name: 'Page Signup', url: 'http://localhost:3000/signup', method: 'HEAD' }
+            ];
+
+            let results = '';
+
+            for (const check of checks) {
+                try {
+                    const response = await fetch(check.url, { method: check.method });
+                    if (response.ok) {
+                        results += `✅ ${check.name}: OK (${response.status})<br>`;
+                    } else {
+                        results += `⚠️ ${check.name}: ${response.status}<br>`;
+                    }
+                } catch (error) {
+                    results += `❌ ${check.name}: ERREUR - ${error.message}<br>`;
+                }
+            }
+
+            resultDiv.innerHTML = results;
+        }
+
+        function checkJavaScript() {
+            const resultDiv = document.getElementById('js-result');
+            resultDiv.innerHTML = 'Vérification JavaScript...<br>';
+
+            // Vérifier si les fonctions existent
+            const functions = [
+                'checkRoleBasedAccess',
+                'submitFormToApi',
+                'showToast',
+                'renderAuthUI'
+            ];
+
+            functions.forEach(func => {
+                if (typeof window[func] === 'function') {
+                    resultDiv.innerHTML += `✅ Fonction ${func}: OK<br>`;
+                } else {
+                    resultDiv.innerHTML += `❌ Fonction ${func}: MANQUANTE<br>`;
+                }
+            });
+
+            // Vérifier les formulaires
+            const forms = document.querySelectorAll('form[data-validate]');
+            resultDiv.innerHTML += `<br>📝 ${forms.length} formulaire(s) avec data-validate trouvé(s)<br>`;
+
+            forms.forEach((form, index) => {
+                const api = form.getAttribute('data-api');
+                const action = form.getAttribute('action');
+                resultDiv.innerHTML += `Formulaire ${index + 1}: API=${api}, Action=${action || 'none'}<br>`;
+            });
+        }
+
+        function checkLocalStorage() {
+            const resultDiv = document.getElementById('storage-result');
+
+            const token = localStorage.getItem(TOKEN_KEY);
+            const userData = localStorage.getItem(USER_KEY);
+
+            let html = '<strong>LocalStorage:</strong><br>';
+
+            if (token) {
+                html += `✅ Token: ${token.substring(0, 20)}...<br>`;
+            } else {
+                html += '❌ Pas de token<br>';
+            }
+
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    html += `✅ Utilisateur: ${user.email} (${user.role})<br>`;
+                } catch (e) {
+                    html += '❌ Données utilisateur corrompues<br>';
+                }
+            } else {
+                html += '❌ Pas de données utilisateur<br>';
+            }
+
+            resultDiv.innerHTML = html;
+        }
+
+        function clearStorage() {
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(USER_KEY);
+            document.getElementById('debug-result').innerHTML = '✅ LocalStorage vidé';
+            checkLocalStorage();
+        }
+
+        function openConsole() {
+            document.getElementById('debug-result').innerHTML =
+                '🔍 Ouvrez la console (F12) pour voir les logs détaillés.<br>' +
+                'Recherchez les messages avec 🚀, 📡, 💾, 🔄';
+        }
+
+        // Diagnostic automatique au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Page de diagnostic chargée');
+            setTimeout(() => {
+                checkJavaScript();
+                checkLocalStorage();
+            }, 1000);
+        });
+
+        // Intercepter les soumissions de formulaire pour le diagnostic
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (form.id === 'test-login-form') {
+                console.log('🚀 Formulaire de test soumis');
+                document.getElementById('form-result').innerHTML = '✅ Formulaire intercepté par JavaScript';
+                e.preventDefault(); // Empêcher la soumission réelle
+            }
+        });
+    </script>
+</body>
+</html>

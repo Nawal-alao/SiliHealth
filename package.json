@@ -1,0 +1,17 @@
+{
+  "name": "healid-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm:backend\" \"npm:frontend\"",
+    "backend": "npm --prefix backend run start:dev",
+    "frontend": "npm --prefix frontend run dev",
+    "e2e:api": "bash ./scripts/run-e2e.sh",
+    "e2e:playwright": "cd e2e && npx playwright test",
+    "test:validation": "node tests/validation-tests.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+
+}

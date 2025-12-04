@@ -1,0 +1,441 @@
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title><%= typeof title !== 'undefined' ? title : 'HealID' %></title>
+  <!-- App icon / favicon -->
+  <link rel="icon" href="/icons/healid-favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="/icons/healid-favicon.ico" type="image/x-icon">
+  <!-- iOS / pinned icons -->
+  <link rel="apple-touch-icon" href="/icons/healid-apple-touch.png">
+  <link rel="manifest" href="/manifest.json">
+  <!-- OpenGraph / Social -->
+  <meta property="og:image" content="/icons/healid-opengraph.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="/icons/healid-opengraph.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#content">Aller au contenu</a>
+  <script>
+    // Early submit capture to prevent native form POST fallback
+    (function(){
+      function serializeFormToJSON(form){
+        const obj = {};
+        const fd = new FormData(form);
+        for(const [k,v] of fd.entries()){
+          // handle checkboxes which may be 'on' or 'true'
+          if(obj[k] !== undefined){
+            if(!Array.isArray(obj[k])) obj[k] = [obj[k]];
+            obj[k].push(v);
+          } else {
+            obj[k] = v;
+          }
+        }
+        return obj;
+      }
+
+      // show validation errors modal (inline fallback)
+      function showValidationErrorsPopupInline(messages){
+        try{
+          if(!Array.isArray(messages)) messages = [String(messages)];
+          if(document.getElementById('sili-validation-overlay-inline')) return;
+          const overlay = document.createElement('div'); overlay.id = 'sili-validation-overlay-inline'; overlay.style.position='fixed'; overlay.style.inset='0'; overlay.style.background='rgba(0,0,0,0.45)'; overlay.style.zIndex=10000; overlay.style.display='flex'; overlay.style.alignItems='center'; overlay.style.justifyContent='center';
+          const modal = document.createElement('div'); modal.id = 'sili-validation-modal-inline'; modal.setAttribute('role','dialog'); modal.setAttribute('aria-modal','true'); modal.style.background='#fff'; modal.style.padding='16px'; modal.style.maxWidth='480px'; modal.style.width='90%'; modal.style.borderRadius='8px'; modal.style.boxShadow='0 8px 24px rgba(2,6,23,0.2)';
+          const title = document.createElement('h3'); title.textContent = 'Validation du mot de passe'; title.style.margin='0 0 8px 0';
+          const ul = document.createElement('ul'); ul.style.margin='6px 0 0 18px'; messages.forEach(m=>{ const li = document.createElement('li'); li.textContent = m; ul.appendChild(li); });
+          const btn = document.createElement('button'); btn.textContent = 'Fermer'; btn.className='btn btn--primary'; btn.style.marginTop='12px'; btn.addEventListener('click', ()=>{ overlay.remove(); });
+          modal.appendChild(title); modal.appendChild(ul); modal.appendChild(btn); overlay.appendChild(modal); document.body.appendChild(overlay); btn.focus();
+        }catch(e){ console.error('inline validation modal error', e); alert(Array.isArray(messages)?messages.join('\n'):messages); }
+      }
+
+      async function minimalSubmitHandler(form){
+        try{
+          const api = form.getAttribute('data-api');
+          if(!api) return false;
+          const method = (form.getAttribute('method')||'POST').toUpperCase();
+          const url = api.startsWith('http') ? api : (window.API_BASE || (window.location.origin.replace(/:[0-9]+$/,'')+':4000')) + api;
+          const isMultipart = form.enctype === 'multipart/form-data' || form.querySelector('input[type=file]');
+          let options = { method, headers: {} };
+          const token = localStorage.getItem('healid_token');
+          if(token) options.headers['Authorization'] = 'Bearer ' + token;
+
+          if(isMultipart){
+            options.body = new FormData(form);
+          } else {
+            const payload = serializeFormToJSON(form);
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(payload);
+          }
+
+          const res = await fetch(url, options);
+          let json = {};
+          try{ json = await res.json(); }catch(e){ json = { ok: res.ok, status: res.status }; }
+
+          // If backend returns validation messages in shape { statusCode: 400, message: [...] }
+          if(json && json.statusCode === 400 && Array.isArray(json.message) && json.message.length){
+            try{ if(typeof showValidationErrorsPopupInline === 'function') showValidationErrorsPopupInline(json.message); else alert(json.message.join('\n')); }catch(e){ console.error(e); }
+            return true;
+          }
+
+          // Basic handling for login/signup flows
+          if(api.includes('/login') || api.endsWith('/login')){
+            if(json && json.ok && json.token && json.user){
+              try{ localStorage.setItem('healid_token', json.token); localStorage.setItem('healid_user', JSON.stringify(json.user)); }catch(e){}
+              // redirect according to role
+              const role = json.user && json.user.role;
+              const dest = role === 'patient' ? '/dashboard-patient' : (role === 'agent_de_sante' ? '/dashboard-agent' : '/dashboard');
+              window.location.href = dest;
+            } else {
+              // fallback: reload to show server response
+              console.warn('Login failed (inline handler)', json);
+              // display error inline if form has space (let main.js handle)
+            }
+          } else if(api.includes('/signup') || api.endsWith('/signup')){
+            // On signup success, navigate to login (main.js may auto-login)
+            if(json && json.ok){
+              try{ window.location.href = '/login'; }catch(e){}
+            }
+          }
+
+          return true;
+        }catch(err){ console.error('minimalSubmitHandler error', err); return false; }
+      }
+
+      document.addEventListener('submit', function(ev){
+        try{
+          const form = ev.target;
+          if(form && form.hasAttribute && form.hasAttribute('data-api')){
+            // prevent native fallback
+            ev.preventDefault();
+            // Prefer delegating to the canonical handler if available (check both window and global name)
+            if((window && typeof window.submitFormToApi === 'function') || (typeof submitFormToApi === 'function')){
+              ev.stopPropagation();
+              try{
+                if(window && typeof window.submitFormToApi === 'function') window.submitFormToApi(form, form.getAttribute('data-api'));
+                else submitFormToApi(form, form.getAttribute('data-api'));
+              }catch(e){ console.error('delegate submit failed', e); }
+              return;
+            }
+            // fallback minimal handler
+            ev.stopPropagation();
+            minimalSubmitHandler(form).catch(e=>console.error(e));
+          }
+        }catch(e){ console.error('early submit capture error', e); }
+      }, true);
+      // Immediate theme toggle handler (works before main.js loads)
+      (function(){
+        function setThemeInternal(theme){
+          const useDark = theme === 'dark' || (theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if(useDark) document.body.classList.add('dark'); else document.body.classList.remove('dark');
+          try{ localStorage.setItem('healid_theme', theme); }catch(e){}
+          try{ document.documentElement.setAttribute('data-theme', useDark ? 'dark' : 'light'); }catch(e){}
+          // update icons if present
+          const headerToggle = document.getElementById('theme-toggle');
+          if(headerToggle){
+            const lightIcon = headerToggle.querySelector('.theme-icon--light');
+            const darkIcon = headerToggle.querySelector('.theme-icon--dark');
+            if(useDark){ if(lightIcon) lightIcon.style.display='none'; if(darkIcon) darkIcon.style.display='block'; headerToggle.setAttribute('aria-pressed','true'); headerToggle.title='Basculer vers le thème clair'; }
+            else { if(lightIcon) lightIcon.style.display='block'; if(darkIcon) darkIcon.style.display='none'; headerToggle.setAttribute('aria-pressed','false'); headerToggle.title='Basculer vers le thème sombre'; }
+          }
+        }
+
+        // initialize from localStorage immediately
+        try{ const st = localStorage.getItem('healid_theme') || 'light'; setThemeInternal(st); }catch(e){}
+
+        // attach click handler to toggle if present
+        document.addEventListener('click', function(ev){
+          try{
+            const toggle = ev.target.closest && ev.target.closest('#theme-toggle');
+            if(!toggle) return;
+            ev.preventDefault(); ev.stopPropagation();
+            const current = (localStorage.getItem('healid_theme') || (document.body.classList.contains('dark') ? 'dark' : 'light'));
+            const next = current === 'dark' ? 'light' : 'dark';
+            setThemeInternal(next);
+          }catch(e){ /* ignore */ }
+        }, true);
+      })();
+    })();
+  </script>
+  
+  <header class="header header--professional" role="banner" aria-label="HealID - Navigation principale">
+    <div class="header__container">
+      <!-- Section gauche : Logo + Navigation -->
+      <div class="header__left">
+        <a href="/" class="header__logo" id="header-logo" aria-label="HealID - Accueil">
+          <div class="logo__icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="2" y="2" width="20" height="20" rx="6" fill="#6B8CFF"/>
+              <path d="M8 12h8M12 8v8" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="logo__text">HealID</span>
+        </a>
+
+        <!-- Navigation principale -->
+        <nav class="header__nav" aria-label="Navigation principale" id="main-navigation">
+          <!-- Liens publics -->
+          <a class="nav__link" href="/blog" aria-label="Consulter les actualités médicales">
+            <span>Actualités</span>
+          </a>
+          <a class="nav__link" href="/support" aria-label="Accéder au support et assistance">
+            <span>Assistance</span>
+          </a>
+
+          <!-- Navigation selon rôle -->
+          <div id="role-navigation" class="nav__role-section">
+            <!-- Navigation Agent -->
+            <div id="agent-nav" class="nav__role-group" style="display: none;">
+              <a class="nav__link nav__link--active" href="/dashboard-agent" aria-label="Tableau de bord - Gestion des patients">
+                <span>Patients</span>
+              </a>
+              <a class="nav__link" href="/consultations" aria-label="Gestion des consultations médicales">
+                <span>Consultations</span>
+              </a>
+              <a class="nav__link" href="/appointments" aria-label="Gestion des rendez-vous">
+                <span>Rendez-vous</span>
+              </a>
+            </div>
+
+            <!-- Navigation Patient -->
+            <div id="patient-nav" class="nav__role-group" style="display: none;">
+              <a class="nav__link nav__link--active" href="/dashboard-patient" aria-label="Mon tableau de bord personnel">
+                <span>Mon dossier</span>
+              </a>
+              <a class="nav__link" href="/consultations" aria-label="Mes consultations médicales">
+                <span>Mes consultations</span>
+              </a>
+              <a class="nav__link" href="/profil-patient" aria-label="Mon profil médical">
+                <span>Mon profil</span>
+              </a>
+            </div>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Section centrale : Recherche (agents seulement) -->
+      <div class="header__center">
+        <div id="global-search" class="header__search" style="display: none;">
+          <div class="search__wrapper">
+            <svg class="search__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input
+              type="search"
+              id="patient-search"
+              class="search__input"
+              placeholder="Rechercher un patient..."
+              aria-label="Rechercher un patient par nom, ID ou numéro de dossier"
+              autocomplete="off"
+            >
+            <button id="search-btn" class="search__button" aria-label="Lancer la recherche">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+            </button>
+          </div>
+          <div id="search-results" class="search__results" style="display: none;" role="listbox"></div>
+        </div>
+      </div>
+
+      <!-- Section droite : Actions + Profil -->
+      <div class="header__right">
+        <!-- Actions rapides -->
+        <div class="header__actions" id="quick-actions">
+          <!-- Scanner QR (agents) -->
+          <button
+            id="scan-qr-btn"
+            class="action-btn action-btn--accent"
+            style="display: none;"
+            aria-label="Scanner un QR Code patient"
+            title="Scanner QR Code"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="5" height="5" rx="1"></rect>
+              <rect x="16" y="3" width="5" height="5" rx="1"></rect>
+              <rect x="3" y="16" width="5" height="5" rx="1"></rect>
+              <rect x="16" y="16" width="5" height="5" rx="1"></rect>
+            </svg>
+            <span class="action-btn__label">QR</span>
+          </button>
+
+          <!-- Nouveau patient (agents) -->
+          <button
+            id="new-patient-btn"
+            class="action-btn action-btn--success"
+            style="display: none;"
+            aria-label="Créer un nouveau dossier patient"
+            title="Nouveau patient"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14"></path>
+              <path d="M5 12h14"></path>
+            </svg>
+            <span class="action-btn__label">Nouveau</span>
+          </button>
+
+          <!-- Notifications -->
+          <button
+            id="notifications-btn"
+            class="action-btn action-btn--secondary action-btn--notification"
+            aria-label="Voir les notifications"
+            title="Notifications"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span id="notification-badge" class="notification-badge" style="display: none;" aria-label="Nombre de notifications">0</span>
+          </button>
+
+          <!-- Toggle thème -->
+          <button
+            id="theme-toggle"
+            class="action-btn action-btn--secondary"
+            title="Basculer entre le thème clair et sombre"
+            aria-label="Basculer le thème"
+            aria-pressed="false"
+          >
+            <svg class="theme-icon theme-icon--light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+            <svg class="theme-icon theme-icon--dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Bouton URGENCE (séparé visuellement) -->
+        <button
+          id="emergency-btn"
+          class="header__emergency emergency-btn"
+          style="display: none;"
+          aria-label="Accès d'urgence - Toutes les actions seront journalisées"
+          title="URGENCE - Accès journalisé"
+        >
+          <span class="emergency-btn__icon">🚨</span>
+          <span class="emergency-btn__text">URGENCE</span>
+        </button>
+
+        <!-- Profil utilisateur -->
+        <div id="user-profile" class="header__profile" style="display: none;">
+          <button id="profile-btn" class="profile-btn" aria-label="Menu profil utilisateur" aria-haspopup="true" aria-expanded="false">
+            <div class="profile-btn__avatar">
+                <img id="user-avatar" src="" alt="Avatar" style="width:32px;height:32px;border-radius:50%;display:none;object-fit:cover;" />
+                <svg id="user-avatar-fallback" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
+            <div class="profile-btn__info">
+              <span id="user-name" class="profile-btn__name"></span>
+              <span id="user-role" class="profile-btn__role"></span>
+            </div>
+            <svg class="profile-btn__arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6,9 12,15 18,9"></polyline>
+            </svg>
+          </button>
+
+          <!-- Menu déroulant profil -->
+          <div id="profile-menu" class="profile-menu" style="display: none;" role="menu" aria-label="Menu profil">
+            <a href="#" id="my-profile-link" class="profile-menu__item" role="menuitem">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>Mon profil</span>
+            </a>
+            <a href="#" id="settings-link" class="profile-menu__item" role="menuitem">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m15.364 6.364l-4.243-4.243m-4.242 0L5.636 18.364m12.728 0l-4.243-4.243m-4.242 0L5.636 5.636"></path>
+              </svg>
+              <span>Paramètres</span>
+            </a>
+            <a href="/support" class="profile-menu__item" role="menuitem">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"></path>
+              </svg>
+              <span>Aide</span>
+            </a>
+            <div class="profile-menu__divider"></div>
+            <button id="logout-btn" class="profile-menu__item profile-menu__item--danger" role="menuitem">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path>
+              </svg>
+              <span>Se déconnecter</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Actions non connecté -->
+        <div id="auth-actions" class="header__auth">
+          <a class="btn btn--ghost" href="/signup" aria-label="Créer un compte HealID">S'inscrire</a>
+          <a class="btn btn--primary" href="/login" aria-label="Se connecter à votre compte">Se connecter</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Modales pour urgence et avertissements -->
+  <div id="emergency-modal" class="modal" style="display: none;" role="dialog" aria-labelledby="emergency-title" aria-modal="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="emergency-title">🚨 ACCÈS D'URGENCE</h3>
+      </div>
+      <div class="modal-body">
+        <div class="emergency-warning">
+          <strong>⚠️ AVERTISSEMENT LÉGAL</strong>
+          <p>Cet accès d'urgence aux données médicales sera intégralement journalisé et auditable.</p>
+          <p>Il est réservé aux situations d'urgence vitale uniquement.</p>
+          <p><strong>Code d'accès d'urgence (6 chiffres) :</strong></p>
+          <input
+            type="text"
+            id="emergency-code"
+            class="input"
+            placeholder="000000"
+            maxlength="6"
+            pattern="[0-9]{6}"
+            required
+            aria-label="Code d'accès d'urgence"
+            style="margin-bottom: 12px;"
+          />
+          <p><strong>Raison de l'accès (obligatoire) :</strong></p>
+          <textarea
+            id="emergency-reason"
+            placeholder="Décrivez brièvement la situation d'urgence..."
+            required
+            aria-label="Raison de l'accès d'urgence"
+          ></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="emergency-cancel" class="btn btn--secondary">Annuler</button>
+        <button id="emergency-confirm" class="btn btn--danger">Confirmer l'accès</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal avertissement QR -->
+  <div id="qr-warning-modal" class="modal" style="display: none;" role="dialog" aria-labelledby="qr-title" aria-modal="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="qr-title">📱 SCAN QR CODE</h3>
+      </div>
+      <div class="modal-body">
+        <div class="qr-warning">
+          <p><strong>Accès sécurisé :</strong> Le scan de QR code sera enregistré pour audit.</p>
+          <p>Assurez-vous d'avoir l'autorisation appropriée.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="qr-cancel" class="btn btn--secondary">Annuler</button>
+        <button id="qr-confirm" class="btn btn--primary">Continuer</button>
+      </div>
+    </div>
+  </div>

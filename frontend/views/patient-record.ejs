@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" role="main" class="site layout">
+    <nav class="sidebar" aria-label="Section navigation">
+      <a class="nav-item active" href="/patient-record" aria-current="page">Dossier patient</a>
+    </nav>
+    <div class="main">
+      <div class="card">
+        <h3>Jane Doe</h3>
+        <p class="muted">Née le: 1990-08-12 — Email: jane@example.com</p>
+        <section style="margin-top:12px"><h4>Allergies</h4><div class="card-compact">Aucune</div></section>
+        <section style="margin-top:12px"><h4>Maladies antérieures</h4><div class="card-compact">Asthme (diagnostiqué 2010)</div></section>
+        <section style="margin-top:12px"><h4>Traitements actuels</h4><div class="card-compact">Inhalateur PRN</div></section>
+        <div style="margin-top:12px"><a class="btn" href="/profile?edit=true" aria-label="Modifier le dossier patient">Modifier</a></div>
+      </div>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+</html>

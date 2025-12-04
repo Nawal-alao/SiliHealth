@@ -1,0 +1,35 @@
+
+> healid-backend@1.0.0 start:dev
+> ts-node-dev --respawn --transpile-only src/main.ts
+
+[INFO] 03:53:41 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.9.2, typescript ver. 5.9.3)
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [NestFactory] Starting Nest application...
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [InstanceLoader] AppModule dependencies initialized +68ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [InstanceLoader] HealthModule dependencies initialized +2ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [InstanceLoader] QrModule dependencies initialized +1ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [InstanceLoader] UploadModule dependencies initialized +1ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [InstanceLoader] ConsultationsModule dependencies initialized +1ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [InstanceLoader] PatientsModule dependencies initialized +1ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [InstanceLoader] AuthModule dependencies initialized +0ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RoutesResolver] AuthController {/api}: +138ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/signup, POST} route +19ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/login, POST} route +4ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RoutesResolver] MeController {/api}: +1ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/me, GET} route +20ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RoutesResolver] PatientsController {/api/patients}: +0ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/patients, GET} route +11ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/patients/summary/:patientId, GET} route +19ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/patients/:patientId, GET} route +9ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/patients, POST} route +15ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/patients/:patientId, PUT} route +9ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RoutesResolver] ConsultationsController {/api}: +0ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/consultations, GET} route +9ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/consultations, POST} route +8ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RoutesResolver] UploadController {/api}: +5ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/upload, POST} route +9ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RoutesResolver] QrController {/api}: +1ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/api/qr-verify, POST} route +5ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RoutesResolver] HealthController {/}: +3ms
+[Nest] 200431  - 12/02/2025, 3:53:49 AM     LOG [RouterExplorer] Mapped {/, GET} route +8ms
+[Nest] 200431  - 12/02/2025, 3:53:50 AM     LOG [NestApplication] Nest application successfully started +686ms
+HealID backend running at http://localhost:4000

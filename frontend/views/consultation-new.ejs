@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" class="site">
+    <div class="card">
+      <h3>Créer une nouvelle consultation</h3>
+      <form data-validate data-api="/api/consultations" method="post">
+        <div class="row"><div class="col"><label>Nom du patient<input name="patient" class="input" required></label></div><div class="col"><label>Date<input type="date" name="date" class="input" required></label></div></div>
+        <label>Informations médicales<textarea class="input" name="medical_info" rows="4"></textarea></label>
+        <label>Symptômes<textarea class="input" name="symptoms" rows="3"></textarea></label>
+        <label>Diagnostic<textarea class="input" name="diagnosis" rows="3"></textarea></label>
+        <label>Ordonnance (texte)
+          <textarea class="input" name="prescription" rows="3"></textarea>
+        </label>
+        <label>Uploader ordonnance (PDF)
+          <input type="file" accept="application/pdf" class="input" name="prescription_pdf">
+        </label>
+        <div style="margin-top:12px"><button class="btn" type="submit">Enregistrer</button></div>
+      </form>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+</html>

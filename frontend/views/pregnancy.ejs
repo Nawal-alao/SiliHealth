@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" role="main" class="site layout">
+    <nav class="sidebar" aria-label="Section navigation">
+      <a class="nav-item active" href="/pregnancy" aria-current="page">Suivi</a>
+    </nav>
+    <div class="main">
+      <div class="card">
+        <h3>Suivi de grossesse</h3>
+        <p class="muted">Date de début: <strong>2025-05-01</strong> — Estimée accouchement: <strong>2026-01-05</strong></p>
+        <section style="margin-top:12px"><h4>Rendez-vous</h4><ul class="muted"><li>2025-06-10 — Echo</li><li>2025-08-22 — Consultation</li></ul></section>
+        <section style="margin-top:12px"><h4>Risques</h4><div id="pregnancy-risks" class="card-compact muted">Calcul en cours...</div></section>
+        <section style="margin-top:12px"><h4>Courbe de croissance</h4><canvas id="pregnancy-growth-chart" style="height:120px;max-height:120px;"></canvas></section>
+      </div>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Calcul des risques de grossesse
+      function calculatePregnancyRisks() {
+        const risksDiv = document.getElementById('pregnancy-risks');
+        if (!risksDiv) return;
+
+        // Simulation basée sur des données (à remplacer par des vraies données du patient)
+        const riskFactors = [];
+        const gestationalAge = 20; // semaines (à récupérer depuis les données patient)
+        
+        // Exemples de calculs de risques
+        if (gestationalAge > 35) {
+          riskFactors.push('Grossesse à terme avancée');
+        }
+        
+        // Ajouter d'autres facteurs de risque basés sur les données du patient
+        // (diabète, hypertension, âge maternel, etc.)
+
+        if (riskFactors.length === 0) {
+          risksDiv.innerHTML = '<div class="card-compact" style="color: var(--success);">✅ Aucun risque majeur détecté</div>';
+        } else {
+          risksDiv.innerHTML = '<div class="card-compact" style="color: var(--warning);">⚠️ ' + riskFactors.join(', ') + '</div>';
+        }
+      }
+
+      // Graphique de courbe de croissance
+      const ctx = document.getElementById('pregnancy-growth-chart');
+      if (ctx) {
+        // Données simulées (à remplacer par de vraies données)
+        const gestationalWeeks = [8, 12, 16, 20, 24, 28, 32, 36];
+        const fetalWeight = [5, 45, 200, 400, 700, 1200, 2000, 2800]; // grammes
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: gestationalWeeks.map(w => `${w} sem.`),
+            datasets: [{
+              label: 'Poids fœtal (g)',
+              data: fetalWeight,
+              borderColor: 'rgb(107, 140, 255)',
+              backgroundColor: 'rgba(107, 140, 255, 0.1)',
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: 'Poids (g)' } },
+              x: { title: { display: true, text: 'Semaines de grossesse' } }
+            }
+          }
+        });
+      }
+
+      calculatePregnancyRisks();
+    });
+  </script>
+</html>

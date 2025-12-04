@@ -1,0 +1,469 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid()) @map("id")
+  email     String   @unique @map("email")
+  password  String   @map("password")
+  role      String   @map("role")
+  createdAt DateTime @default(now()) @db.Timestamptz @map("created_at")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  // Relations
+  patient    Patient?
+  agent      Agent?
+
+  @@index([email])
+  @@map("users")
+}
+
+model Patient {
+  // Identification & métadonnées
+  userId        String   @id @map("user_id")
+  patientId     String   @unique @default(uuid()) @map("patient_id")
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  displayName   String?  @map("display_name")
+  birthDate     DateTime @map("birth_date")
+  sexAtBirth    String   @map("sex_at_birth") // M/F/Other
+  genderIdentity String? @map("gender_identity")
+  nationalIdNumber String? @map("national_id_number") // PII - À CHIFFRER
+  createdAt     DateTime @default(now()) @db.Timestamp
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+
+  // Contact & adresse
+  email         String?  @map("email")
+  phone         String?  @map("phone")
+  addressLine1   String?  @map("address_line1")
+  addressLine2   String?  @map("address_line2")
+  city          String?  @map("city")
+  postalCode    String?  @map("postal_code")
+  country       String?  @default("France") @map("country")
+  emergencyContactName String? @map("emergency_contact_name")
+  emergencyContactPhone String? @map("emergency_contact_phone")
+  relationshipToPatient String? @map("relationship_to_patient")
+
+  // Statut socio-démographique
+  maritalStatus String?  @map("marital_status")
+  occupation    String?  @map("occupation")
+  educationLevel String? @map("education_level")
+  ethnicity     String?  @map("ethnicity") // OPTIONNEL
+  smokingStatus String?  @map("smoking_status")
+  alcoholUse    String?  @map("alcohol_use")
+
+  // Mesures & signes vitaux
+  heightCm      Float?   @map("height_cm")
+  weightKg      Float?   @map("weight_kg")
+  bmi           Float?   @map("bmi")
+  bloodType     String?  @map("blood_type") // A+, A-, B+, B-, AB+, AB-, O+, O-
+  bloodPressureSystolic Int? @map("blood_pressure_systolic")
+  bloodPressureDiastolic Int? @map("blood_pressure_diastolic")
+  heartRate     Int?     @map("heart_rate")
+  temperatureC  Float?   @map("temperature_c")
+
+  // Antécédents médicaux (JSONB)
+  chronicConditions Json? @map("chronic_conditions")
+  surgeries      Json?   @map("surgeries")
+  familyHistory  Json?   @map("family_history")
+  allergies      Json?   @map("allergies")
+  currentMedications Json? @map("current_medications")
+
+  // Vaccinations
+  vaccinations   Json?   @map("vaccinations")
+
+  // Examens & résultats (imaging moved to documents table, labResults now a relation)
+  imaging        Json?   @map("imaging")
+
+  // Données spécifiques femmes (uniquement si sex_at_birth = 'F')
+  menarcheAge    Int?    @map("menarche_age")
+  menstrualCycleRegular Boolean? @map("menstrual_cycle_regular")
+  menstrualCycleLength Int? @map("menstrual_cycle_length")
+  contraception  Json?   @map("contraception")
+  pregnantCurrent Boolean? @map("pregnant_current")
+  pregnancyDetails Json? @map("pregnancy_details")
+  gynecologicalHistory Json? @map("gynecological_history")
+
+  // Données spécifiques hommes (uniquement si sex_at_birth = 'M')
+  urologicalHistory Json? @map("urological_history")
+  testicularExamNotes String? @map("testicular_exam_notes")
+
+  // Santé mentale
+  mentalHealthConditions Json? @map("mental_health_conditions")
+  currentTherapy Boolean? @map("current_therapy")
+  suicidalIdeationScreened Boolean? @map("suicidal_ideation_screened")
+
+  // Assurance & administratif
+  insuranceProvider String? @map("insurance_provider")
+  insuranceNumber String? @map("insurance_number") // PII - À CHIFFRER
+  consentForDataProcessing Boolean @default(false) @map("consent_for_data_processing")
+  consentTimestamp DateTime? @map("consent_timestamp")
+
+  // Sécurité & confidentialité
+  shareWithResearch Boolean @default(false) @map("share_with_research")
+
+  // Audit fields
+  createdByUserId String? @map("created_by_user_id")
+  modifiedByUserId String? @map("modified_by_user_id")
+  modifiedAt    DateTime? @map("modified_at")
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments  Appointment[]
+  medicalNotes  MedicalNote[]
+  treatments    Treatment[]
+  documents     MedicalDocument[]
+  qrLinks       QRLink[]
+  emergencyLogs EmergencyLog[]
+  consultations Consultation[]
+  prenatalFollowUps PrenatalFollowUp[] @relation("PrenatalFollowUps")
+  labResults    LabResult[] @relation("LabResults")
+
+  @@index([patientId])
+  @@index([birthDate])
+  @@index([sexAtBirth])
+  @@map("patients")
+}
+
+model Agent {
+  userId          String   @id @map("user_id")
+  licenseNumber   String?  @unique @map("license_number") // numéro d'ordre
+  specialty       String?  @map("specialty") // spécialité médicale
+  phone           String?  @map("phone") // téléphone professionnel
+  department      String?  @map("department") // service/hôpital
+  institutionName String?  @map("institution_name") // nom de l'établissement
+  addressLine1     String?  @map("address_line1") // adresse professionnelle
+  city            String?  @map("city")
+  postalCode      String?  @map("postal_code")
+  createdAt       DateTime @default(now()) @db.Timestamp
+  updatedAt       DateTime? @updatedAt @map("updated_at")
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments    Appointment[]
+  medicalNotes    MedicalNote[]
+  treatments      Treatment[]
+  documents       MedicalDocument[]
+  emergencyLogs   EmergencyLog[]
+  consultations   Consultation[]
+  prenatalFollowUps PrenatalFollowUp[] @relation("PrenatalFollowUps")
+  labResults      LabResult[] @relation("LabResults")
+  sharedAgendas   SharedAgenda[] @relation("SharedAgendas")
+  healthStatistics HealthStatistic[] @relation("HealthStatistics")
+
+  @@index([licenseNumber])
+  @@map("agents")
+}
+
+
+model Upload {
+  id        String   @id @default(uuid())
+  filename  String
+  path      String
+  uploadedBy String  @map("uploaded_by") // user_id
+  patientId String?  @map("patient_id")
+  createdAt DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  @@map("uploads")
+}
+
+model ActivityLog {
+  id            String   @id @default(uuid())
+  actorUserId   String   @map("actor_user_id") // qui a fait l'action
+  action        String
+  targetPatientId String? @map("target_patient_id") // patient concerné
+  details       String?
+  ipAddress     String?  @map("ip_address")
+  userAgent     String?  @map("user_agent")
+  createdAt     DateTime @default(now()) @db.Timestamp
+
+  @@index([actorUserId])
+  @@index([targetPatientId])
+  @@map("activity_logs")
+}
+
+model Appointment {
+  id            String   @id @default(uuid())
+  patientId     String   @map("patient_id")
+  agentId       String   @map("agent_id") // agent qui a créé le RDV
+  title         String   @map("title")
+  description   String?  @map("description")
+  appointmentDate DateTime @map("appointment_date")
+  duration      Int      @default(30) @map("duration") // en minutes
+  status        String   @default("scheduled") @map("status") // scheduled, confirmed, completed, cancelled
+  type          String?  @map("type") // consultation, suivi, urgence, etc.
+  notes         String?  @map("notes")
+  createdBy     String   @map("created_by") // user_id qui a créé
+  createdAt     DateTime @default(now()) @db.Timestamp
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+
+  // Relations
+  patient       Patient  @relation(fields: [patientId], references: [patientId])
+  agent         Agent    @relation(fields: [agentId], references: [userId])
+
+  @@index([patientId])
+  @@index([agentId])
+  @@index([appointmentDate])
+  @@index([status])
+  @@map("appointments")
+}
+
+model MedicalNote {
+  id            String   @id @default(uuid())
+  patientId     String   @map("patient_id")
+  agentId       String   @map("agent_id") // agent qui a écrit la note
+  title         String   @map("title")
+  content       String   @map("content")
+  type          String   @map("type") // consultation, diagnostic, traitement, etc.
+  isPrivate     Boolean  @default(false) @map("is_private") // visible seulement par agents
+  createdAt     DateTime @default(now()) @db.Timestamp
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+
+  // Relations
+  patient       Patient  @relation(fields: [patientId], references: [patientId])
+  agent         Agent    @relation(fields: [agentId], references: [userId])
+
+  @@index([patientId])
+  @@index([agentId])
+  @@index([type])
+  @@map("medical_notes")
+}
+
+model Treatment {
+  id            String   @id @default(uuid())
+  patientId     String   @map("patient_id")
+  agentId       String   @map("agent_id") // agent qui a prescrit
+  medication    String   @map("medication")
+  dosage        String   @map("dosage")
+  frequency     String   @map("frequency")
+  duration      String?  @map("duration")
+  startDate     DateTime @map("start_date")
+  endDate       DateTime? @map("end_date")
+  instructions  String?  @map("instructions")
+  status        String   @default("active") @map("status") // active, completed, stopped
+  createdAt     DateTime @default(now()) @db.Timestamp
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+
+  // Relations
+  patient       Patient  @relation(fields: [patientId], references: [patientId])
+  agent         Agent    @relation(fields: [agentId], references: [userId])
+
+  @@index([patientId])
+  @@index([agentId])
+  @@index([status])
+  @@map("treatments")
+}
+
+model MedicalDocument {
+  id            String   @id @default(uuid())
+  patientId     String   @map("patient_id")
+  agentId       String   @map("agent_id") // agent qui a déposé
+  title         String   @map("title")
+  description   String?  @map("description")
+  documentType  String   @map("document_type") // ordonnance, compte-rendu, radio, etc.
+  fileName      String   @map("file_name")
+  filePath      String   @map("file_path")
+  fileSize      Int      @map("file_size")
+  mimeType      String   @map("mime_type")
+  isConfidential Boolean @default(false) @map("is_confidential")
+  createdAt     DateTime @default(now()) @db.Timestamp
+
+  // Relations
+  patient       Patient  @relation(fields: [patientId], references: [patientId])
+  agent         Agent    @relation(fields: [agentId], references: [userId])
+
+  @@index([patientId])
+  @@index([agentId])
+  @@index([documentType])
+  @@map("medical_documents")
+}
+
+model QRLink {
+  id          String   @id @default(uuid())
+  patientId   String   @map("patient_id")
+  secureToken String   @unique @map("secure_token") // token unique pour le QR
+  isActive    Boolean  @default(true) @map("is_active")
+  expiresAt   DateTime? @map("expires_at") // expiration optionnelle
+  createdAt   DateTime @default(now()) @db.Timestamp
+  createdBy   String   @map("created_by") // user_id qui a créé
+  lastScannedAt DateTime? @map("last_scanned_at")
+  scanCount   Int      @default(0) @map("scan_count")
+
+  // Relations
+  patient     Patient  @relation(fields: [patientId], references: [patientId])
+
+  @@index([patientId])
+  @@index([secureToken])
+  @@index([isActive])
+  @@map("qr_links")
+}
+
+model EmergencyLog {
+  id            String   @id @default(uuid())
+  patientId     String   @map("patient_id")
+  agentId       String   @map("agent_id") // agent qui a accédé
+  accessCode    String   @map("access_code") // code d'urgence utilisé
+  accessReason  String   @map("access_reason") // raison de l'accès d'urgence
+  accessedData  String   @map("accessed_data") // JSON des données consultées
+  ipAddress     String?  @map("ip_address")
+  userAgent     String?  @map("user_agent")
+  createdAt     DateTime @default(now()) @db.Timestamp
+
+  // Relations
+  patient       Patient  @relation(fields: [patientId], references: [patientId])
+  agent         Agent    @relation(fields: [agentId], references: [userId])
+
+  @@index([patientId])
+  @@index([agentId])
+  @@index([createdAt])
+  @@map("emergency_logs")
+}
+
+model Consultation {
+  id            String   @id @default(uuid())
+  patientId     String   @map("patient_id")
+  agentId       String   @map("agent_id") // agent qui consulte
+  appointmentId String?  @map("appointment_id") // si lié à un RDV
+  title         String   @map("title")
+  summary       String   @map("summary")
+  diagnosis     String?  @map("diagnosis")
+  recommendations String? @map("recommendations")
+  followUpDate  DateTime? @map("follow_up_date")
+  status        String   @default("completed") @map("status") // completed, pending, cancelled
+  duration      Int      @default(30) @map("duration") // durée en minutes
+  createdAt     DateTime @default(now()) @db.Timestamp
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+
+  // Relations
+  patient       Patient  @relation(fields: [patientId], references: [patientId])
+  agent         Agent    @relation(fields: [agentId], references: [userId])
+
+  @@index([patientId])
+  @@index([agentId])
+  @@index([createdAt])
+  @@index([status])
+  @@map("consultations")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  // userRole helps to distinguish patient vs agent (patient|agent_de_sante)
+  userRole  String   @map("user_role")
+  type      String   @map("type") // e.g., qr_scan, appointment_reminder, lab_result
+  message   String   @map("message")
+  data      Json?    @map("data")
+  isRead    Boolean  @default(false) @map("is_read")
+  viewedAt  DateTime? @map("viewed_at")
+  createdAt DateTime @default(now()) @db.Timestamp @map("created_at")
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+// === NOUVELLES TABLES POUR FONCTIONNALITÉS AVANCÉES ===
+
+model PrenatalFollowUp {
+  id              String   @id @default(uuid())
+  patientId       String   @map("patient_id")
+  agentId         String   @map("agent_id")
+  gestationalWeek Int      @map("gestational_week")
+  riskLevel       String   @default("normal") @map("risk_level") // normal, moderate, high
+  riskFactors     Json?    @map("risk_factors") // tableau des facteurs de risque
+  nextVisitDate   DateTime @map("next_visit_date")
+  notes           String?  @map("notes")
+  alertTriggered  Boolean  @default(false) @map("alert_triggered")
+  alertMessage    String?  @map("alert_message")
+  createdAt       DateTime @default(now()) @db.Timestamp
+  updatedAt       DateTime? @updatedAt @map("updated_at")
+
+  patient         Patient  @relation("PrenatalFollowUps", fields: [patientId], references: [patientId], onDelete: Cascade)
+  agent           Agent    @relation("PrenatalFollowUps", fields: [agentId], references: [userId])
+
+  @@index([patientId])
+  @@index([agentId])
+  @@index([riskLevel])
+  @@map("prenatal_follow_ups")
+}
+
+model LabResult {
+  id              String   @id @default(uuid())
+  patientId       String   @map("patient_id")
+  agentId         String   @map("agent_id")
+  testName        String   @map("test_name") // ex: hémoglobine, tension, glucose
+  value           Float    @map("value")
+  unit            String   @map("unit") // g/dL, mmHg, mg/dL, etc.
+  referenceMin    Float?   @map("reference_min")
+  referenceMax    Float?   @map("reference_max")
+  abnormal        Boolean  @default(false) @map("abnormal")
+  criticalThreshold Float? @map("critical_threshold")
+  exceedsCritical Boolean  @default(false) @map("exceeds_critical")
+  testDate        DateTime @map("test_date")
+  createdAt       DateTime @default(now()) @db.Timestamp
+
+  patient         Patient  @relation("LabResults", fields: [patientId], references: [patientId], onDelete: Cascade)
+  agent           Agent    @relation("LabResults", fields: [agentId], references: [userId])
+
+  @@index([patientId])
+  @@index([agentId])
+  @@index([testName])
+  @@index([abnormal])
+  @@map("lab_results")
+}
+
+model SharedAgenda {
+  id              String   @id @default(uuid())
+  agentId         String   @map("agent_id")
+  appointmentId   String   @map("appointment_id")
+  sharedWith      Json    @map("shared_with") // array de user_ids d'autres agents
+  createdAt       DateTime @default(now()) @db.Timestamp
+
+  agent           Agent    @relation("SharedAgendas", fields: [agentId], references: [userId])
+
+  @@index([agentId])
+  @@map("shared_agendas")
+}
+
+model HealthStatistic {
+  id              String   @id @default(uuid())
+  centerId        String?  @map("center_id") // optionnel: id du centre/institution
+  centerName      String?  @map("center_name")
+  agentId         String   @map("agent_id")
+  patientsFollowed Int    @default(0) @map("patients_followed")
+  consultationsCompleted Int @default(0) @map("consultations_completed")
+  examsPerformed  Int      @default(0) @map("exams_performed")
+  pregnancyFollowed Int    @default(0) @map("pregnancy_followed")
+  vaccinationsGiven Int    @default(0) @map("vaccinations_given")
+  chronicConditionPatients Int @default(0) @map("chronic_condition_patients")
+  emergencyAccessCount Int  @default(0) @map("emergency_access_count")
+  reportDate      DateTime @map("report_date")
+  createdAt       DateTime @default(now()) @db.Timestamp
+
+  agent           Agent    @relation("HealthStatistics", fields: [agentId], references: [userId])
+
+  @@index([agentId])
+  @@index([reportDate])
+  @@map("health_statistics")
+}
+
+model SyncQueue {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  entityType      String   @map("entity_type") // consultation, appointment, lab_result, etc.
+  entityId        String   @map("entity_id")
+  action          String   @map("action") // create, update, delete
+  data            Json    @map("data")
+  synced          Boolean  @default(false) @map("synced")
+  syncedAt        DateTime? @map("synced_at")
+  createdAt       DateTime @default(now()) @db.Timestamp
+
+  @@index([userId])
+  @@index([synced])
+  @@map("sync_queue")
+}

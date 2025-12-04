@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" class="site">
+    <section class="form" aria-labelledby="signup">
+      <h2 id="signup">Créer un compte</h2>
+      <form data-validate data-api="/api/signup" method="post">
+        <div class="row">
+          <div class="col">
+            <label>Prénom<input class="input" name="firstName" required></label>
+          </div>
+          <div class="col">
+            <label>Nom<input class="input" name="lastName" required></label>
+          </div>
+        </div>
+        <label>Email<input type="email" class="input" name="email" required></label>
+        <div class="row">
+          <div class="col">
+            <label>Mot de passe<input type="password" class="input" name="password" required></label>
+          </div>
+          <div class="col">
+            <label>Confirmer mot de passe<input type="password" class="input" name="confirm_password" required></label>
+          </div>
+        </div>
+
+        <label>Vous êtes
+          <select class="input" name="role" id="role-select" required>
+            <option value="">Sélectionnez votre rôle</option>
+            <option value="patient">Patient</option>
+            <option value="agent_de_sante">Agent de santé</option>
+          </select>
+        </label>
+
+        <!-- Champs spécifiques aux patients -->
+        <div id="patient-fields" style="display: none;">
+          <h3>Informations patient</h3>
+          <label>Sexe de naissance
+            <select class="input" name="sexAtBirth">
+              <option value="">Sélectionnez</option>
+              <option value="F">Femme</option>
+              <option value="M">Homme</option>
+              <option value="Other">Autre</option>
+            </select>
+          </label>
+          <label>Date de naissance<input type="date" class="input" name="birthDate" required></label>
+          <label>Téléphone<input type="tel" class="input" name="phone" placeholder="+33123456789"></label>
+          <label>Adresse<input type="text" class="input" name="addressLine1" placeholder="Numéro et rue"></label>
+          <div class="row">
+            <div class="col">
+              <label>Ville<input type="text" class="input" name="city"></label>
+            </div>
+            <div class="col">
+              <label>Code postal<input type="text" class="input" name="postalCode" pattern="[0-9]{5}" placeholder="75001"></label>
+            </div>
+          </div>
+          <h4>Contact d'urgence</h4>
+          <label>Nom du contact<input type="text" class="input" name="emergencyContactName"></label>
+          <label>Téléphone du contact<input type="tel" class="input" name="emergencyContactPhone" placeholder="+33123456789"></label>
+        </div>
+
+        <!-- Champs spécifiques aux agents de santé -->
+        <div id="agent-fields" style="display: none;">
+          <h3>Informations professionnelles</h3>
+          <label>Numéro de licence<input type="text" class="input" name="licenseNumber" placeholder="Ex: MED123456"></label>
+          <label>Spécialité<input type="text" class="input" name="specialty" placeholder="Ex: Médecine générale"></label>
+          <label>Service/Département<input type="text" class="input" name="department" placeholder="Ex: Médecine interne"></label>
+        </div>
+
+        <!-- Consentement obligatoire -->
+        <div style="margin: 20px 0; padding: 15px; background: var(--surface); border-radius: 8px; border: 1px solid var(--accent);">
+          <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+            <input type="checkbox" name="consentForDataProcessing" value="true" required style="margin-top: 2px;">
+            <span style="font-size: 14px; line-height: 1.4;">
+              J'accepte que mes données soient collectées et traitées conformément à la politique de confidentialité de HealID.
+              <strong>Cette autorisation est obligatoire pour créer un compte.</strong>
+            </span>
+          </label>
+          <br><br>
+          <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+            <input type="checkbox" name="shareWithResearch" value="true" style="margin-top: 2px;">
+            <span style="font-size: 14px; line-height: 1.4;">
+              J'accepte que mes données anonymisées soient utilisées à des fins de recherche médicale (optionnel).
+            </span>
+          </label>
+        </div>
+
+        <div style="margin-top:12px">
+          <button class="btn" type="submit">S'inscrire</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    // Gestion des champs conditionnels selon le rôle
+    document.addEventListener('DOMContentLoaded', function() {
+      const roleSelect = document.getElementById('role-select');
+      const patientFields = document.getElementById('patient-fields');
+      const agentFields = document.getElementById('agent-fields');
+
+      function toggleFields() {
+        const selectedRole = roleSelect.value;
+
+        if (selectedRole === 'patient') {
+          patientFields.style.display = 'block';
+          agentFields.style.display = 'none';
+          // Rendre les champs patient requis
+          document.querySelector('[name="sexAtBirth"]').setAttribute('required', 'true');
+          document.querySelector('[name="birthDate"]').setAttribute('required', 'true');
+        } else if (selectedRole === 'agent_de_sante') {
+          patientFields.style.display = 'none';
+          agentFields.style.display = 'block';
+          // Retirer les required des champs patient
+          document.querySelector('[name="sexAtBirth"]').removeAttribute('required');
+          document.querySelector('[name="birthDate"]').removeAttribute('required');
+        } else {
+          patientFields.style.display = 'none';
+          agentFields.style.display = 'none';
+          // Retirer les required des champs patient
+          document.querySelector('[name="sexAtBirth"]').removeAttribute('required');
+          document.querySelector('[name="birthDate"]').removeAttribute('required');
+        }
+      }
+
+      roleSelect.addEventListener('change', toggleFields);
+      toggleFields(); // Appel initial
+    });
+  </script>
+
+  <%-  include('./partials/footer.ejs') %>
+</html>

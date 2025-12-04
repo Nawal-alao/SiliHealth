@@ -1,0 +1,93 @@
+{
+  "timestamp": "2025-11-25T07:32:28.314Z",
+  "results": [
+    {
+      "page": "index",
+      "violations": []
+    },
+    {
+      "page": "signup",
+      "violations": []
+    },
+    {
+      "page": "login",
+      "violations": []
+    },
+    {
+      "page": "dashboard",
+      "violations": []
+    },
+    {
+      "page": "consultations",
+      "violations": []
+    },
+    {
+      "page": "consultation-new",
+      "violations": []
+    },
+    {
+      "page": "consultation-detail",
+      "violations": []
+    },
+    {
+      "page": "upload-results",
+      "violations": []
+    },
+    {
+      "page": "pregnancy",
+      "violations": []
+    },
+    {
+      "page": "pregnancy-calculator",
+      "violations": []
+    },
+    {
+      "page": "tests-history",
+      "violations": []
+    },
+    {
+      "page": "patient-record",
+      "violations": []
+    },
+    {
+      "page": "access-history",
+      "violations": []
+    },
+    {
+      "page": "activity-log",
+      "violations": []
+    },
+    {
+      "page": "permissions",
+      "violations": []
+    },
+    {
+      "page": "profile",
+      "violations": []
+    },
+    {
+      "page": "system-settings",
+      "violations": []
+    },
+    {
+      "page": "support",
+      "violations": []
+    },
+    {
+      "page": "blog",
+      "violations": []
+    },
+    {
+      "page": "article",
+      "violations": []
+    },
+    {
+      "page": "scan-qr",
+      "violations": []
+    },
+    {
+      "page": "generate-qr",
+      "violations": []
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Générer QR Code - HealID</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/frontend/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+      .qr-generator {
+        max-width: 600px;
+        margin: 40px auto;
+        padding: 24px;
+        border-radius: 12px;
+        background: #f9fafb;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+      }
+      
+      .form-group {
+        margin-bottom: 16px;
+      }
+      
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #1f2937;
+      }
+      
+      .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+      
+      .form-group input:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+      
+      .qr-output {
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        border: 2px dashed #d1d5db;
+        margin-top: 24px;
+        text-align: center;
+        display: none;
+      }
+      
+      .qr-output.active {
+        display: block;
+      }
+      
+      #qrcode {
+        display: inline-block;
+        padding: 16px;
+        background: white;
+        border-radius: 8px;
+      }
+      
+      .security-info {
+        background: #eff6ff;
+        border-left: 4px solid #2563eb;
+        padding: 16px;
+        border-radius: 8px;
+        margin-top: 24px;
+      }
+      
+      .security-info h3 {
+        margin-top: 0;
+        color: #1e40af;
+      }
+      
+      .security-info ul {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+      
+      .security-info li {
+        color: #064e3b;
+        margin: 6px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <%-  include('./partials/header.ejs') %>
+    
+    <main id="content" class="site">
+      <div class="qr-generator">
+        <h2 style="margin-top: 0;">🔐 Générateur de QR Code Patient</h2>
+        <p class="muted">⚠️ Outil réservé aux administrateurs. Générez un QR code unique pour chaque patient.</p>
+        
+        <div class="form-group">
+          <label for="patient-id">ID Patient :</label>
+          <input type="number" id="patient-id" placeholder="ex: 1" min="1">
+        </div>
+        
+        <div class="form-group">
+          <label for="patient-name">Nom du Patient :</label>
+          <input type="text" id="patient-name" placeholder="ex: Jean Dupont" readonly style="background: #f3f4f6;">
+        </div>
+        
+        <button type="button" class="btn btn--primary" onclick="generateQR()">Générer QR Code</button>
+        <button type="button" class="btn btn--ghost" onclick="downloadQR()">📥 Télécharger</button>
+        <button type="button" class="btn btn--success" onclick="printQR()">🖨️ Imprimer</button>
+        
+        <div class="qr-output" id="qr-output">
+          <div id="qrcode"></div>
+          <p class="muted" style="margin-top: 16px;">QR Code généré avec succès</p>
+        </div>
+        
+        <div class="security-info">
+          <h3>🔒 Informations de sécurité</h3>
+          <ul>
+            <li>✓ Chaque QR code est unique par patient</li>
+            <li>✓ Format : HEALID_[ID_PATIENT]</li>
+            <li>✓ Les données sensibles ne sont pas encodées</li>
+            <li>✓ Accès complet nécessite une connexion</li>
+            <li>✓ Tous les scans sont enregistrés pour l'audit</li>
+            <li>✓ Valide indéfiniment mais synchronisé avec le compte</li>
+          </ul>
+        </div>
+      </div>
+    </main>
+    
+    <%-  include('./partials/footer.ejs') %>
+    
+    <script>
+      async function generateQR() {
+        const patientId = document.getElementById('patient-id').value;
+        
+        if (!patientId) {
+          alert('Veuillez entrer l\'ID du patient');
+          return;
+        }
+        
+        // Construire le contenu du QR code
+        const qrContent = `HEALID_${patientId}`;
+        
+        // Générer le QR code
+        document.getElementById('qrcode').innerHTML = '';
+        new QRCode(document.getElementById('qrcode'), {
+          text: qrContent,
+          width: 256,
+          height: 256,
+          colorDark: '#000000',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H,
+        });
+        
+        document.getElementById('qr-output').classList.add('active');
+      }
+      
+      function downloadQR() {
+        const canvas = document.querySelector('#qrcode canvas');
+        if (!canvas) {
+          alert('Veuillez d\'abord générer un QR code');
+          return;
+        }
+        
+        const link = document.createElement('a');
+        const patientId = document.getElementById('patient-id').value;
+        link.href = canvas.toDataURL('image/png');
+        link.download = `QR_Patient_${patientId}.png`;
+        link.click();
+      }
+      
+      function printQR() {
+        const canvas = document.querySelector('#qrcode canvas');
+        if (!canvas) {
+          alert('Veuillez d\'abord générer un QR code');
+          return;
+        }
+        
+        const printWindow = window.open();
+        const patientId = document.getElementById('patient-id').value;
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>QR Code Patient ${patientId}</title>
+              <style>
+                body { text-align: center; font-family: Arial; padding: 20px; }
+                h2 { margin: 20px 0; }
+                img { max-width: 400px; }
+              </style>
+            </head>
+            <body>
+              <h2>QR Code Patient</h2>
+              <p>ID Patient : ${patientId}</p>
+              ${canvas.parentElement.innerHTML}
+              <p style="margin-top: 20px; font-size: 12px; color: #666;">
+                À scannef sur : http://localhost:3000/scan-qr
+              </p>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+      }
+      
+      // Charger les infos du patient si l'ID change
+      document.getElementById('patient-id').addEventListener('change', async (e) => {
+        const patientId = e.target.value;
+        if (!patientId) return;
+        
+        // Optionnel : fetch infos patient du backend
+        // Pour la démo, on laisse juste le champ vide
+        document.getElementById('patient-name').value = 'Patient ID: ' + patientId;
+      });
+    </script>
+  </body>
+</html>

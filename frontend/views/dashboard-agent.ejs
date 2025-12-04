@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" role="main" class="site">
+    <div class="layout">
+      <nav class="sidebar" aria-label="Navigation principale">
+        <a class="nav-item active" href="/dashboard-agent" aria-current="page">Dashboard</a>
+        <a class="nav-item" href="/profil-agent">Mon Profil</a>
+        <a class="nav-item" href="/consultations">Consultations</a>
+        <a class="nav-item" href="#patients">Gestion Patients</a>
+        <a class="nav-item" href="/system-settings">Paramètres</a>
+      </nav>
+      <div class="main">
+        <!-- Recherche et gestion des patients -->
+        <section class="card" style="margin-bottom: 18px;">
+          <h3>Gestion des patients</h3>
+          <div style="margin-bottom: 16px;">
+            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+              <input type="text" id="patient-search" class="input" placeholder="Rechercher un patient (nom, ID, email)" style="flex: 1;">
+              <button class="btn" onclick="searchPatients()">Rechercher</button>
+              <button class="btn btn--primary" onclick="showCreatePatientModal()">Nouveau Patient</button>
+            </div>
+          </div>
+
+          <div id="patients-list">
+            <p class="muted">Recherchez un patient ou créez-en un nouveau.</p>
+          </div>
+        </section>
+
+        <!-- Rendez-vous du jour -->
+        <div class="grid">
+          <div class="card">
+            <h4>Rendez-vous du jour</h4>
+            <div id="appointments-today">
+              <p class="muted">Chargement...</p>
+            </div>
+            <div style="margin-top: 12px;">
+              <button class="btn btn--primary" onclick="showAppointmentModal()">Créer RDV</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h4>Statistiques</h4>
+            <p class="muted">Nombre de patients: <span id="patient-count">-</span></p>
+            <p class="muted">Consultations ce mois: <span id="consultation-count">-</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+
+  <!-- Modal pour créer/modifier un rendez-vous -->
+  <div id="appointment-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1001;">
+    <div class="card" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+      <h3 id="appointment-modal-title">Créer un rendez-vous</h3>
+      <form id="appointment-form" onsubmit="saveAppointment(event)">
+        <input type="hidden" id="appointment-id" name="id">
+
+        <label>Patient
+          <select id="appointment-patient-id" class="input" name="patientId" required>
+            <option value="">Sélectionnez un patient</option>
+          </select>
+        </label>
+
+        <label>Titre<input type="text" id="appointment-title" class="input" name="title" required placeholder="Ex: Consultation de suivi"></label>
+
+        <div class="row">
+          <div class="col">
+            <label>Date et heure<input type="datetime-local" id="appointment-date" class="input" name="appointmentDate" required></label>
+          </div>
+          <div class="col">
+            <label>Durée (minutes)<input type="number" id="appointment-duration" class="input" name="duration" min="15" step="15" value="30" required></label>
+          </div>
+        </div>
+
+        <label>Type
+          <select id="appointment-type" class="input" name="type">
+            <option value="">Sélectionnez</option>
+            <option value="consultation">Consultation</option>
+            <option value="suivi">Suivi</option>
+            <option value="urgence">Urgence</option>
+            <option value="examen">Examen</option>
+            <option value="autre">Autre</option>
+          </select>
+        </label>
+
+        <label>Description<textarea id="appointment-description" class="input" name="description" rows="3" placeholder="Notes sur le rendez-vous"></textarea></label>
+
+        <label>Statut
+          <select id="appointment-status" class="input" name="status">
+            <option value="scheduled">Programmé</option>
+            <option value="confirmed">Confirmé</option>
+            <option value="completed">Terminé</option>
+            <option value="cancelled">Annulé</option>
+          </select>
+        </label>
+
+        <label>Notes<textarea id="appointment-notes" class="input" name="notes" rows="2" placeholder="Notes supplémentaires"></textarea></label>
+
+        <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" class="btn" onclick="closeAppointmentModal()">Annuler</button>
+          <button type="submit" class="btn btn--primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal pour créer/modifier un patient -->
+  <div id="patient-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div class="card" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+      <h3 id="patient-modal-title">Créer un nouveau patient</h3>
+      <form id="patient-form" data-validate data-api="/api/patients" method="post">
+        <input type="hidden" name="patientId" id="patient-id">
+
+        <div class="row">
+          <div class="col">
+            <label>Prénom<input class="input" name="firstName" required></label>
+          </div>
+          <div class="col">
+            <label>Nom<input class="input" name="lastName" required></label>
+          </div>
+        </div>
+
+        <label>Email<input type="email" class="input" name="email"></label>
+
+        <div class="row">
+          <div class="col">
+            <label>Sexe
+              <select class="input" name="sexAtBirth" id="sex-select" required>
+                <option value="">Sélectionnez</option>
+                <option value="F">Femme</option>
+                <option value="M">Homme</option>
+                <option value="Other">Autre</option>
+              </select>
+            </label>
+          </div>
+          <div class="col">
+            <label>Date de naissance<input type="date" class="input" name="birthDate" required></label>
+          </div>
+        </div>
+
+        <label>Téléphone<input type="tel" class="input" name="phone"></label>
+
+        <div class="row">
+          <div class="col">
+            <label>Adresse<input type="text" class="input" name="addressLine1" placeholder="Numéro et rue"></label>
+          </div>
+          <div class="col">
+            <label>Ville<input type="text" class="input" name="city"></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label>Code postal<input type="text" class="input" name="postalCode" pattern="[0-9]{5}"></label>
+          </div>
+          <div class="col">
+            <label>Taille (cm)<input type="number" class="input" name="heightCm" min="50" max="250"></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label>Poids (kg)<input type="number" class="input" name="weightKg" min="2" max="300" step="0.1"></label>
+          </div>
+          <div class="col">
+            <label>Groupe sanguin
+              <select class="input" name="bloodType">
+                <option value="">Sélectionnez</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <!-- Champs spécifiques aux femmes -->
+        <div id="female-fields" style="display: none; margin-top: 16px; padding: 12px; background: var(--surface); border-radius: 8px;">
+          <h4>Informations spécifiques (Femme)</h4>
+
+          <div class="row">
+            <div class="col">
+              <label>Âge des premières règles<input type="number" class="input" name="menarcheAge" min="8" max="18"></label>
+            </div>
+            <div class="col">
+              <label>Cycle régulier<select class="input" name="menstrualCycleRegular">
+                <option value="">Sélectionnez</option>
+                <option value="true">Oui</option>
+                <option value="false">Non</option>
+              </select>
+            </label>
+          </div>
+          </div>
+
+          <label>Longueur du cycle (jours)<input type="number" class="input" name="menstrualCycleLength" min="15" max="45"></label>
+
+          <label>Enceinte actuellement<select class="input" name="pregnantCurrent" id="pregnant-select">
+            <option value="">Sélectionnez</option>
+            <option value="true">Oui</option>
+            <option value="false">Non</option>
+          </select></label>
+
+          <div id="pregnancy-details" style="display: none;">
+            <h5>Détails de grossesse</h5>
+            <label>Âge gestationnel (semaines)<input type="number" class="input" name="gestationalAgeWeeks" min="1" max="42"></label>
+            <label>Date prévue d'accouchement<input type="date" class="input" name="expectedDeliveryDate"></label>
+          </div>
+
+          <label>Historique gynécologique<textarea class="input" name="gynecologicalHistory" rows="3" placeholder="Antécédents gynécologiques..."></textarea></label>
+        </div>
+
+        <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" class="btn" onclick="closePatientModal()">Annuler</button>
+          <button type="submit" class="btn btn--primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Gestion des champs conditionnels selon le sexe
+    document.addEventListener('DOMContentLoaded', function() {
+      const sexSelect = document.getElementById('sex-select');
+      const femaleFields = document.getElementById('female-fields');
+      const pregnantSelect = document.getElementById('pregnant-select');
+      const pregnancyDetails = document.getElementById('pregnancy-details');
+
+      function toggleFields() {
+        const selectedSex = sexSelect.value;
+
+        if (selectedSex === 'F') {
+          femaleFields.style.display = 'block';
+        } else {
+          femaleFields.style.display = 'none';
+        }
+      }
+
+      function togglePregnancyDetails() {
+        const isPregnant = pregnantSelect.value === 'true';
+        pregnancyDetails.style.display = isPregnant ? 'block' : 'none';
+      }
+
+      sexSelect.addEventListener('change', toggleFields);
+      pregnantSelect.addEventListener('change', togglePregnancyDetails);
+
+      // Chargement initial des patients
+      loadPatients();
+      loadTodayAppointments();
+    });
+
+    // Fonctions pour la gestion des patients
+    async function loadPatients() {
+      const token = localStorage.getItem('healid_token');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:4000/api/patients', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          displayPatients(data.patients || []);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des patients:', error);
+      }
+    }
+
+    function displayPatients(patients) {
+      const container = document.getElementById('patients-list');
+
+      if (patients.length === 0) {
+        container.innerHTML = '<p class="muted">Aucun patient trouvé.</p>';
+        return;
+      }
+
+      let html = '<div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px;">';
+      patients.forEach(patient => {
+        html += `
+          <div class="card" style="cursor: pointer;" onclick="viewPatient('${patient.patientId}')">
+            <h4>${patient.firstName} ${patient.lastName}</h4>
+            <p class="muted">ID: ${patient.patientId}</p>
+            <p class="muted">${patient.email || 'Pas d\'email'}</p>
+            <div style="margin-top: 8px; display: flex; gap: 8px;">
+              <button class="btn btn--small" onclick="event.stopPropagation(); editPatient('${patient.patientId}')">Modifier</button>
+              <button class="btn btn--small" onclick="event.stopPropagation(); viewPatient('${patient.patientId}')">Voir dossier</button>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    async function searchPatients() {
+      const searchTerm = document.getElementById('patient-search').value;
+      const token = localStorage.getItem('healid_token');
+
+      try {
+        const response = await fetch(`http://localhost:4000/api/patients/search?q=${encodeURIComponent(searchTerm)}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          displayPatients(data.patients || []);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la recherche:', error);
+      }
+    }
+
+    function showCreatePatientModal() {
+      document.getElementById('patient-modal-title').textContent = 'Créer un nouveau patient';
+      document.getElementById('patient-form').reset();
+      document.getElementById('patient-id').value = '';
+      document.getElementById('patient-modal').style.display = 'block';
+    }
+
+    function closePatientModal() {
+      document.getElementById('patient-modal').style.display = 'none';
+    }
+
+    async function editPatient(patientId) {
+      const token = localStorage.getItem('healid_token');
+
+      try {
+        const response = await fetch(`http://localhost:4000/api/patients/${patientId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.ok && data.patient) {
+            // Remplir le formulaire avec les données du patient
+            document.getElementById('patient-modal-title').textContent = 'Modifier le patient';
+            document.getElementById('patient-id').value = data.patient.patientId;
+            document.getElementById('patient-form').querySelector('[name="firstName"]').value = data.patient.firstName || '';
+            document.getElementById('patient-form').querySelector('[name="lastName"]').value = data.patient.lastName || '';
+            document.getElementById('patient-form').querySelector('[name="email"]').value = data.patient.email || '';
+            document.getElementById('patient-form').querySelector('[name="sexAtBirth"]').value = data.patient.sexAtBirth || '';
+            document.getElementById('patient-form').querySelector('[name="birthDate"]').value = data.patient.birthDate ? data.patient.birthDate.split('T')[0] : '';
+            document.getElementById('patient-form').querySelector('[name="phone"]').value = data.patient.phone || '';
+            document.getElementById('patient-form').querySelector('[name="addressLine1"]').value = data.patient.addressLine1 || '';
+            document.getElementById('patient-form').querySelector('[name="city"]').value = data.patient.city || '';
+            document.getElementById('patient-form').querySelector('[name="postalCode"]').value = data.patient.postalCode || '';
+            document.getElementById('patient-form').querySelector('[name="heightCm"]').value = data.patient.heightCm || '';
+            document.getElementById('patient-form').querySelector('[name="weightKg"]').value = data.patient.weightKg || '';
+            document.getElementById('patient-form').querySelector('[name="bloodType"]').value = data.patient.bloodType || '';
+
+            // Champs spécifiques aux femmes
+            if (data.patient.sexAtBirth === 'F') {
+              document.getElementById('female-fields').style.display = 'block';
+              document.getElementById('patient-form').querySelector('[name="menarcheAge"]').value = data.patient.menarcheAge || '';
+              document.getElementById('patient-form').querySelector('[name="menstrualCycleRegular"]').value = data.patient.menstrualCycleRegular || '';
+              document.getElementById('patient-form').querySelector('[name="menstrualCycleLength"]').value = data.patient.menstrualCycleLength || '';
+              document.getElementById('patient-form').querySelector('[name="pregnantCurrent"]').value = data.patient.pregnantCurrent || '';
+              document.getElementById('patient-form').querySelector('[name="gynecologicalHistory"]').value = data.patient.gynecologicalHistory || '';
+            }
+
+            document.getElementById('patient-modal').style.display = 'block';
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du patient:', error);
+      }
+    }
+
+    function viewPatient(patientId) {
+      window.location.href = `/patient-record?patientId=${patientId}`;
+    }
+
+    // Fonctions pour la gestion des rendez-vous
+    async function loadTodayAppointments() {
+      const token = localStorage.getItem('healid_token');
+      if (!token) return;
+
+      try {
+        const today = new Date();
+        const startOfDay = new Date(today.setHours(0,0,0,0));
+        const endOfDay = new Date(today.setHours(23,59,59,999));
+        
+        const startDate = startOfDay.toISOString().split('T')[0];
+        const endDate = endOfDay.toISOString().split('T')[0];
+
+        const user = JSON.parse(localStorage.getItem('healid_user') || '{}');
+        const agentId = user.agent?.userId || user.id;
+
+        const response = await fetch(`http://localhost:4000/api/appointments/date-range/${startDate}/${endDate}?agentId=${agentId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const appointments = await response.json();
+          displayTodayAppointments(appointments || []);
+        } else {
+          document.getElementById('appointments-today').innerHTML = '<p class="muted">Aucun rendez-vous programmé aujourd\'hui.</p>';
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des rendez-vous:', error);
+        document.getElementById('appointments-today').innerHTML = '<p class="muted">Erreur lors du chargement.</p>';
+      }
+    }
+
+    function displayTodayAppointments(appointments) {
+      const container = document.getElementById('appointments-today');
+      
+      if (!appointments || appointments.length === 0) {
+        container.innerHTML = '<p class="muted">Aucun rendez-vous programmé aujourd\'hui.</p>';
+        return;
+      }
+
+      let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+      appointments.forEach(apt => {
+        const date = new Date(apt.appointmentDate);
+        const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const statusColors = {
+          scheduled: 'var(--muted)',
+          confirmed: 'var(--accent)',
+          completed: 'var(--success)',
+          cancelled: 'var(--danger)'
+        };
+        html += `
+          <div style="padding: 12px; background: var(--surface); border-radius: 6px; border-left: 3px solid ${statusColors[apt.status] || 'var(--muted)'};">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+              <div>
+                <strong>${timeStr}</strong> - ${apt.title}
+                <p class="muted" style="margin: 4px 0; font-size: 13px;">
+                  ${apt.patient.firstName} ${apt.patient.lastName}
+                  ${apt.type ? ` • ${apt.type}` : ''}
+                </p>
+              </div>
+              <div style="display: flex; gap: 4px;">
+                <button class="btn btn--small" onclick="editAppointment('${apt.id}')" title="Modifier">✏️</button>
+                <button class="btn btn--small" onclick="deleteAppointment('${apt.id}')" title="Supprimer" style="background: var(--danger);">🗑️</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    async function showAppointmentModal(appointmentId = null) {
+      const modal = document.getElementById('appointment-modal');
+      const form = document.getElementById('appointment-form');
+      const token = localStorage.getItem('healid_token');
+      
+      // Charger la liste des patients
+      try {
+        const patientsRes = await fetch('http://localhost:4000/api/patients', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (patientsRes.ok) {
+          const patientsData = await patientsRes.json();
+          const select = document.getElementById('appointment-patient-id');
+          select.innerHTML = '<option value="">Sélectionnez un patient</option>';
+          (patientsData.patients || []).forEach(patient => {
+            const option = document.createElement('option');
+            option.value = patient.patientId;
+            option.textContent = `${patient.firstName} ${patient.lastName}`;
+            select.appendChild(option);
+          });
+        }
+      } catch (e) {
+        console.error('Erreur chargement patients:', e);
+      }
+
+      if (appointmentId) {
+        // Mode édition
+        document.getElementById('appointment-modal-title').textContent = 'Modifier le rendez-vous';
+        try {
+          const res = await fetch(`http://localhost:4000/api/appointments/${appointmentId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const apt = await res.json();
+            document.getElementById('appointment-id').value = apt.id;
+            document.getElementById('appointment-patient-id').value = apt.patientId;
+            document.getElementById('appointment-title').value = apt.title || '';
+            document.getElementById('appointment-date').value = new Date(apt.appointmentDate).toISOString().slice(0, 16);
+            document.getElementById('appointment-duration').value = apt.duration || 30;
+            document.getElementById('appointment-type').value = apt.type || '';
+            document.getElementById('appointment-description').value = apt.description || '';
+            document.getElementById('appointment-status').value = apt.status || 'scheduled';
+            document.getElementById('appointment-notes').value = apt.notes || '';
+          }
+        } catch (e) {
+          console.error('Erreur chargement rendez-vous:', e);
+        }
+      } else {
+        // Mode création
+        document.getElementById('appointment-modal-title').textContent = 'Créer un rendez-vous';
+        form.reset();
+        document.getElementById('appointment-id').value = '';
+        // Définir la date/heure par défaut (maintenant + 1h)
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+        document.getElementById('appointment-date').value = now.toISOString().slice(0, 16);
+      }
+      
+      modal.style.display = 'block';
+    }
+
+    function closeAppointmentModal() {
+      document.getElementById('appointment-modal').style.display = 'none';
+    }
+
+    async function saveAppointment(event) {
+      event.preventDefault();
+      const token = localStorage.getItem('healid_token');
+      const form = document.getElementById('appointment-form');
+      const formData = new FormData(form);
+      const appointmentId = document.getElementById('appointment-id').value;
+
+      const user = JSON.parse(localStorage.getItem('healid_user') || '{}');
+      const agentId = user.agent?.userId || user.id;
+
+      const data = {
+        patientId: formData.get('patientId'),
+        agentId: agentId,
+        title: formData.get('title'),
+        description: formData.get('description') || null,
+        appointmentDate: new Date(formData.get('appointmentDate')).toISOString(),
+        duration: parseInt(formData.get('duration')) || 30,
+        type: formData.get('type') || null,
+        status: formData.get('status') || 'scheduled',
+        notes: formData.get('notes') || null,
+      };
+
+      try {
+        let response;
+        if (appointmentId) {
+          // Mise à jour
+          response = await fetch(`http://localhost:4000/api/appointments/${appointmentId}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          });
+        } else {
+          // Création
+          response = await fetch('http://localhost:4000/api/appointments', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          });
+        }
+
+        if (response.ok) {
+          closeAppointmentModal();
+          loadTodayAppointments();
+          if (typeof showToast === 'function') {
+            showToast(appointmentId ? 'Rendez-vous modifié' : 'Rendez-vous créé', 'success');
+          }
+        } else {
+          const error = await response.json();
+          alert('Erreur: ' + (error.message || 'Erreur lors de la sauvegarde'));
+        }
+      } catch (error) {
+        console.error('Erreur sauvegarde rendez-vous:', error);
+        alert('Erreur lors de la sauvegarde');
+      }
+    }
+
+    async function editAppointment(appointmentId) {
+      await showAppointmentModal(appointmentId);
+    }
+
+    async function deleteAppointment(appointmentId) {
+      if (!confirm('Êtes-vous sûr de vouloir supprimer ce rendez-vous ?')) return;
+
+      const token = localStorage.getItem('healid_token');
+      try {
+        const response = await fetch(`http://localhost:4000/api/appointments/${appointmentId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          loadTodayAppointments();
+          if (typeof showToast === 'function') {
+            showToast('Rendez-vous supprimé', 'success');
+          }
+        } else {
+          alert('Erreur lors de la suppression');
+        }
+      } catch (error) {
+        console.error('Erreur suppression rendez-vous:', error);
+        alert('Erreur lors de la suppression');
+      }
+    }
+
+    // Fermer la modal en cliquant à l'extérieur
+    document.getElementById('appointment-modal')?.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeAppointmentModal();
+      }
+    });
+
+    // Charger les rendez-vous du jour au chargement
+    document.addEventListener('DOMContentLoaded', function() {
+      loadTodayAppointments();
+    });
+
+    // Fermer la modal en cliquant à l'extérieur
+    document.getElementById('patient-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closePatientModal();
+      }
+    });
+  </script>
+</html>

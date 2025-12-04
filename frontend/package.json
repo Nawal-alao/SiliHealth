@@ -1,0 +1,30 @@
+{
+  "name": "healid-frontend",
+  "version": "1.0.0",
+  "description": "Prototype UI for HealID — Express + EJS dev server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "npm run clean-port && nodemon server.js",
+    "clean-port": "echo '🧹 Cleaning port 3000...' && (lsof -ti:3000 | xargs kill -9 2>/dev/null || true) && sleep 1",
+    "dev:force": "nodemon server.js",
+    "test:unit": "vitest run --reporter dot",
+    "test:watch": "vitest",
+    "e2e:playwright": "(cd ../e2e && npx playwright test --project=chromium)",
+    "e2e:api": "bash ../scripts/run-e2e.sh",
+    "lint": "echo 'no linter configured'"
+  },
+  "author": "HealID",
+  "license": "MIT",
+  "dependencies": {
+    "compression": "^1.8.1",
+    "ejs": "^3.1.10",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22",
+    "vitest": "^1.0.0",
+    "@playwright/test": "^1.35.0",
+    "axe-core": "^4.8.0"
+  }
+}

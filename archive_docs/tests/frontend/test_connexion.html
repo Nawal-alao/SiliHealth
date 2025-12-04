@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Connexion Direct</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; }
+        input { width: 100%; padding: 8px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .result { margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Connexion Direct</h1>
+
+    <form id="login-form" data-validate data-api="/api/login" method="post">
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" name="email" value="alice.test.final@example.com" required>
+        </div>
+
+        <div class="form-group">
+            <label>Mot de passe:</label>
+            <input type="password" name="password" value="SecurePass123" required>
+        </div>
+
+        <button type="submit">Se Connecter</button>
+    </form>
+
+    <div id="result" class="result"></div>
+
+    <script>
+        // Simuler les fonctions nécessaires du main.js
+        const API_BASE = 'http://localhost:4000';
+        const TOKEN_KEY = 'healid_token';
+        const USER_KEY = 'healid_user';
+
+        function showToast(message, type = 'info') {
+            console.log(`🍞 Toast: ${message} (${type})`);
+        }
+
+        function renderAuthUI() {
+            console.log('🎨 UI mise à jour');
+        }
+
+        // Fonction principale de soumission
+        async function submitFormToApi(form, api) {
+            console.log('📡 Envoi vers API:', api);
+
+            const method = 'POST';
+            let body;
+            let headers = {};
+
+            const token = localStorage.getItem(TOKEN_KEY);
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            // Créer les données
+            const data = {};
+            new FormData(form).forEach((v, k) => {
+                if (k === 'consentForDataProcessing' || k === 'shareWithResearch') {
+                    data[k] = v === 'true';
+                } else {
+                    data[k] = v;
+                }
+            });
+            body = JSON.stringify(data);
+            headers['Content-Type'] = 'application/json';
+
+            const url = api.startsWith('http') ? api : `${API_BASE}${api}`;
+            console.log('🔗 URL complète:', url);
+            console.log('📦 Données envoyées:', data);
+
+            try {
+                const res = await fetch(url, { method, body, headers });
+                console.log('📡 Réponse HTTP:', res.status);
+
+                const json = await res.json();
+                console.log('📡 Réponse JSON:', json);
+
+                if (!json || !json.ok) {
+                    throw new Error(json && json.error ? json.error : 'API error');
+                }
+
+                // Traitement spécifique pour la connexion
+                if (api.includes('login')) {
+                    console.log('🔐 Traitement connexion');
+
+                    if (json.token) {
+                        localStorage.setItem(TOKEN_KEY, json.token);
+                        console.log('💾 Token stocké');
+                    }
+                    if (json.user) {
+                        localStorage.setItem(USER_KEY, JSON.stringify(json.user));
+                        console.log('👤 Utilisateur stocké:', json.user.role);
+                    }
+
+                    renderAuthUI();
+                    showToast('Connexion réussie !', 'success');
+
+                    const userRole = json.user.role;
+                    const redirectUrl = userRole === 'patient' ? '/dashboard-patient' : '/dashboard-agent';
+                    console.log('🔄 Redirection vers:', redirectUrl);
+
+                    setTimeout(() => {
+                        console.log('⚡ Redirection exécutée');
+                        window.location.href = redirectUrl;
+                    }, 1000);
+                }
+
+                return json;
+
+            } catch (error) {
+                console.error('❌ Erreur:', error);
+                showToast('Erreur: ' + error.message, 'error');
+                return { ok: false, error: error.message };
+            }
+        }
+
+        // Attacher les event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎯 DOM chargé');
+
+            const forms = document.querySelectorAll('form[data-validate]');
+            console.log(`📊 ${forms.length} formulaire(s) trouvé(s)`);
+
+            forms.forEach((form, index) => {
+                const api = form.getAttribute('data-api');
+                console.log(`📝 Formulaire ${index + 1}: API=${api}`);
+
+                form.addEventListener('submit', function(e) {
+                    console.log('🚀 Soumission interceptée');
+                    e.preventDefault();
+                    submitFormToApi(form, api);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

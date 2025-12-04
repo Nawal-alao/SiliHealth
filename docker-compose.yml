@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: healid-postgres
+    environment:
+      POSTGRES_DB: healid
+      POSTGRES_USER: healid
+      POSTGRES_PASSWORD: healid_secure_password_123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U healid"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - healid_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  healid_network:
+    driver: bridge

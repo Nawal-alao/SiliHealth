@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" class="site">
+    <div class="card" style="max-width: 800px; margin: 0 auto;">
+      <h3>Mon Profil Patient</h3>
+
+      <!-- Profile avatar (click to upload) - unobtrusive, does not change layout -->
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+        <img id="profile-avatar" src="" alt="Photo de profil" style="width:96px;height:96px;border-radius:50%;object-fit:cover;display:block;border:1px solid rgba(0,0,0,0.06);" />
+        <div style="flex:1;">
+          <div style="font-size:14px;color:var(--muted);">Photo de profil</div>
+          <div style="font-size:13px;color:var(--muted);">Cliquez sur la photo pour la modifier</div>
+          <div style="margin-top:8px;">
+            <button id="change-avatar-btn" type="button" class="btn" style="padding:6px 10px;font-size:13px;">Changer</button>
+          </div>
+        </div>
+        <input id="profile-avatar-input" type="file" accept="image/*" style="display:none" />
+      </div>
+
+      <form id="profile-form" data-validate data-api="/api/patients/profile" method="put">
+        <h4>Informations générales</h4>
+
+        <div class="row">
+          <div class="col">
+            <label>Prénom<input class="input" name="firstName" required></label>
+          </div>
+          <div class="col">
+            <label>Nom<input class="input" name="lastName" required></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label>Sexe<span class="muted" style="font-size: 12px;"> (non modifiable)</span>
+              <input class="input" name="sexAtBirthDisplay" readonly style="background: var(--muted); opacity: 0.7;">
+              <input type="hidden" name="sexAtBirth">
+            </label>
+          </div>
+          <div class="col">
+            <label>Date de naissance<span class="muted" style="font-size: 12px;"> (non modifiable)</span>
+              <input class="input" type="date" name="birthDateDisplay" readonly style="background: var(--muted); opacity: 0.7;">
+              <input type="hidden" name="birthDate">
+            </label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label>Téléphone<input type="tel" class="input" name="phone" placeholder="+33123456789"></label>
+          </div>
+          <div class="col">
+            <label>Email<input type="email" class="input" name="email"></label>
+          </div>
+        </div>
+
+        <h4>Adresse</h4>
+
+        <label>Adresse<input type="text" class="input" name="addressLine1" placeholder="Numéro et rue"></label>
+
+        <div class="row">
+          <div class="col">
+            <label>Ville<input type="text" class="input" name="city"></label>
+          </div>
+          <div class="col">
+            <label>Code postal<input type="text" class="input" name="postalCode" pattern="[0-9]{5}" placeholder="75001"></label>
+          </div>
+        </div>
+
+        <label>Contact d'urgence<input type="text" class="input" name="emergencyContactName" placeholder="Nom du contact"></label>
+        <label>Téléphone du contact<input type="tel" class="input" name="emergencyContactPhone" placeholder="+33123456789"></label>
+
+        <h4>Informations médicales</h4>
+
+        <div class="row">
+          <div class="col">
+            <label>Taille (cm)<input type="number" class="input" name="heightCm" min="50" max="250" placeholder="170"></label>
+          </div>
+          <div class="col">
+            <label>Poids (kg)<input type="number" class="input" name="weightKg" min="2" max="300" step="0.1" placeholder="70.5"></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label>Groupe sanguin
+              <select class="input" name="bloodType">
+                <option value="">Sélectionnez</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+              </select>
+            </label>
+          </div>
+          <div class="col">
+            <label>IMC<span class="muted" style="font-size: 12px;"> (calculé automatiquement)</span>
+              <input class="input" name="bmiDisplay" readonly style="background: var(--muted); opacity: 0.7;">
+            </label>
+          </div>
+        </div>
+
+        <label>Allergies<textarea class="input" name="allergies" rows="3" placeholder="Liste de vos allergies (médicaments, aliments, etc.)"></textarea></label>
+
+        <label>Antécédents médicaux personnels<textarea class="input" name="chronicConditions" rows="3" placeholder="Maladies chroniques, opérations, etc."></textarea></label>
+
+        <label>Antécédents familiaux<textarea class="input" name="familyHistory" rows="3" placeholder="Maladies dans la famille"></textarea></label>
+
+        <label>Vaccinations<textarea class="input" name="vaccinations" rows="3" placeholder="Vaccins reçus et dates"></textarea></label>
+
+        <label>Traitements en cours<textarea class="input" name="currentMedications" rows="3" placeholder="Médicaments actuellement pris"></textarea></label>
+
+        <!-- Champs spécifiques aux femmes -->
+        <div id="female-specific-fields" style="display: none;">
+          <h4>Informations spécifiques (Femme)</h4>
+
+          <div class="row">
+            <div class="col">
+              <label>Âge des premières règles<input type="number" class="input" name="menarcheAge" min="8" max="18" placeholder="12"></label>
+            </div>
+            <div class="col">
+              <label>Cycle menstruel régulier
+                <select class="input" name="menstrualCycleRegular">
+                  <option value="">Sélectionnez</option>
+                  <option value="true">Oui</option>
+                  <option value="false">Non</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <label>Longueur moyenne du cycle (jours)<input type="number" class="input" name="menstrualCycleLength" min="15" max="45" placeholder="28"></label>
+
+          <label>Contraception<textarea class="input" name="contraception" rows="2" placeholder="Méthode contraceptive utilisée"></textarea></label>
+
+          <label>Enceinte actuellement
+            <select class="input" name="pregnantCurrent" id="pregnant-current-select">
+              <option value="">Sélectionnez</option>
+              <option value="true">Oui</option>
+              <option value="false">Non</option>
+            </select>
+          </label>
+
+          <div id="pregnancy-section" style="display: none;">
+            <h5>Détails de grossesse</h5>
+            <div class="row">
+              <div class="col">
+                <label>Âge gestationnel (semaines)<input type="number" class="input" name="gestationalAgeWeeks" min="1" max="42"></label>
+              </div>
+              <div class="col">
+                <label>Date prévue d'accouchement<input type="date" class="input" name="expectedDeliveryDate"></label>
+              </div>
+            </div>
+            <label>Historique obstétrical<textarea class="input" name="pregnancyDetails" rows="3" placeholder="Nombre de grossesses précédentes, accouchements, etc."></textarea></label>
+          </div>
+
+          <label>Historique gynécologique<textarea class="input" name="gynecologicalHistory" rows="3" placeholder="Examens gynécologiques, traitements hormonaux, etc."></textarea></label>
+        </div>
+
+        <div style="margin-top: 24px; padding: 16px; background: var(--surface); border-radius: 8px;">
+          <label style="display: flex; align-items: flex-start; gap: 10px;">
+            <input type="checkbox" name="consentForDataProcessing" value="true" required style="margin-top: 2px;">
+            <span style="font-size: 14px; line-height: 1.4;">
+              J'accepte que mes données soient collectées et traitées conformément à la politique de confidentialité de HealID.
+              <strong>Cette autorisation est obligatoire.</strong>
+            </span>
+          </label>
+          <br><br>
+          <label style="display: flex; align-items: flex-start; gap: 10px;">
+            <input type="checkbox" name="shareWithResearch" value="true" style="margin-top: 2px;">
+            <span style="font-size: 14px; line-height: 1.4;">
+              J'accepte que mes données anonymisées soient utilisées à des fins de recherche médicale (optionnel).
+            </span>
+          </label>
+        </div>
+
+        <div style="margin-top: 24px;">
+          <button type="submit" class="btn btn--primary">Mettre à jour mon profil</button>
+        </div>
+      </form>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+      const token = localStorage.getItem('healid_token');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+
+      // Charger les données du patient
+      try {
+        const apiBase = (window.API_BASE || 'http://localhost:4000');
+        const response = await fetch(`${apiBase}/api/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.ok && data.patient) {
+            populateForm(data.patient);
+          }
+        } else if (response.status === 401) {
+          localStorage.removeItem('healid_token');
+          localStorage.removeItem('healid_user');
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du profil:', error);
+      }
+
+      // Gestion des champs conditionnels
+      const pregnantSelect = document.getElementById('pregnant-current-select');
+      const pregnancySection = document.getElementById('pregnancy-section');
+
+      pregnantSelect.addEventListener('change', function() {
+        pregnancySection.style.display = this.value === 'true' ? 'block' : 'none';
+      });
+
+      // Calcul automatique de l'IMC
+      const heightInput = document.querySelector('[name="heightCm"]');
+      const weightInput = document.querySelector('[name="weightKg"]');
+      const bmiDisplay = document.querySelector('[name="bmiDisplay"]');
+
+      function calculateBMI() {
+        const height = parseFloat(heightInput.value) / 100; // convertir cm en m
+        const weight = parseFloat(weightInput.value);
+
+        if (height > 0 && weight > 0) {
+          const bmi = (weight / (height * height)).toFixed(1);
+          bmiDisplay.value = bmi;
+        } else {
+          bmiDisplay.value = '';
+        }
+      }
+
+      heightInput.addEventListener('input', calculateBMI);
+      weightInput.addEventListener('input', calculateBMI);
+    });
+
+    function populateForm(patient) {
+      // Informations générales
+      document.querySelector('[name="firstName"]').value = patient.firstName || '';
+      document.querySelector('[name="lastName"]').value = patient.lastName || '';
+      document.querySelector('[name="sexAtBirth"]').value = patient.sexAtBirth || '';
+      document.querySelector('[name="sexAtBirthDisplay"]').value = getSexDisplay(patient.sexAtBirth);
+      document.querySelector('[name="birthDate"]').value = patient.birthDate || '';
+      document.querySelector('[name="birthDateDisplay"]').value = patient.birthDate ? patient.birthDate.split('T')[0] : '';
+      document.querySelector('[name="phone"]').value = patient.phone || '';
+      document.querySelector('[name="email"]').value = patient.email || '';
+
+      // afficher avatar si présent
+      try{
+        const avatarEl = document.getElementById('profile-avatar');
+        if(avatarEl){
+          const apiBase = (window.API_BASE || 'http://localhost:4000');
+          if(patient.avatarUrl){
+            // If backend returns a relative path (e.g. /uploads/...), prefix with apiBase
+            avatarEl.src = (patient.avatarUrl.startsWith('http') ? patient.avatarUrl : `${apiBase}${patient.avatarUrl}`);
+            avatarEl.style.display = 'block';
+          } else {
+            // show default by sex or neutral default
+            const sex = (patient.sexAtBirth || '').toUpperCase();
+            if (sex === 'F') avatarEl.src = '/icons/default-female.svg';
+            else if (sex === 'M') avatarEl.src = '/icons/default-male.svg';
+            else avatarEl.src = '/icons/default-male.svg';
+            avatarEl.style.display = 'block';
+          }
+        }
+      }catch(e){}
+
+      // Adresse
+      document.querySelector('[name="addressLine1"]').value = patient.addressLine1 || '';
+      document.querySelector('[name="city"]').value = patient.city || '';
+      document.querySelector('[name="postalCode"]').value = patient.postalCode || '';
+      document.querySelector('[name="emergencyContactName"]').value = patient.emergencyContactName || '';
+      document.querySelector('[name="emergencyContactPhone"]').value = patient.emergencyContactPhone || '';
+
+      // Informations médicales
+      document.querySelector('[name="heightCm"]').value = patient.heightCm || '';
+      document.querySelector('[name="weightKg"]').value = patient.weightKg || '';
+      document.querySelector('[name="bloodType"]').value = patient.bloodType || '';
+      document.querySelector('[name="bmiDisplay"]').value = patient.bmi || '';
+      document.querySelector('[name="allergies"]').value = patient.allergies ? JSON.stringify(patient.allergies, null, 2) : '';
+      document.querySelector('[name="chronicConditions"]').value = patient.chronicConditions ? JSON.stringify(patient.chronicConditions, null, 2) : '';
+      document.querySelector('[name="familyHistory"]').value = patient.familyHistory ? JSON.stringify(patient.familyHistory, null, 2) : '';
+      document.querySelector('[name="vaccinations"]').value = patient.vaccinations ? JSON.stringify(patient.vaccinations, null, 2) : '';
+      document.querySelector('[name="currentMedications"]').value = patient.currentMedications ? JSON.stringify(patient.currentMedications, null, 2) : '';
+
+      // Consentements
+      document.querySelector('[name="consentForDataProcessing"]').checked = patient.consentForDataProcessing || false;
+      document.querySelector('[name="shareWithResearch"]').checked = patient.shareWithResearch || false;
+
+      // Champs spécifiques aux femmes
+      if (patient.sexAtBirth === 'F') {
+        document.getElementById('female-specific-fields').style.display = 'block';
+        document.querySelector('[name="menarcheAge"]').value = patient.menarcheAge || '';
+        document.querySelector('[name="menstrualCycleRegular"]').value = patient.menstrualCycleRegular ? patient.menstrualCycleRegular.toString() : '';
+        document.querySelector('[name="menstrualCycleLength"]').value = patient.menstrualCycleLength || '';
+        document.querySelector('[name="contraception"]').value = patient.contraception ? JSON.stringify(patient.contraception, null, 2) : '';
+        document.querySelector('[name="pregnantCurrent"]').value = patient.pregnantCurrent ? patient.pregnantCurrent.toString() : '';
+
+        if (patient.pregnantCurrent) {
+          document.getElementById('pregnancy-section').style.display = 'block';
+          document.querySelector('[name="gestationalAgeWeeks"]').value = patient.pregnancyDetails?.gestationalAgeWeeks || '';
+          document.querySelector('[name="expectedDeliveryDate"]').value = patient.pregnancyDetails?.expectedDeliveryDate || '';
+          document.querySelector('[name="pregnancyDetails"]').value = patient.pregnancyDetails ? JSON.stringify(patient.pregnancyDetails, null, 2) : '';
+        }
+
+        document.querySelector('[name="gynecologicalHistory"]').value = patient.gynecologicalHistory || '';
+      }
+    }
+
+    function getSexDisplay(sexCode) {
+      switch(sexCode) {
+        case 'F': return 'Femme';
+        case 'M': return 'Homme';
+        case 'Other': return 'Autre';
+        default: return '';
+      }
+    }
+
+    // Avatar upload wiring: clicking the avatar opens file picker and uploads
+    (function() {
+      const avatarEl = document.getElementById('profile-avatar');
+      const fileInput = document.getElementById('profile-avatar-input');
+      const changeBtn = document.getElementById('change-avatar-btn');
+      if (!avatarEl || !fileInput) return;
+
+      avatarEl.style.cursor = 'pointer';
+      avatarEl.addEventListener('click', () => fileInput.click());
+      if (changeBtn) changeBtn.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', async (evt) => {
+        const file = evt.target.files && evt.target.files[0];
+        if (!file) return;
+
+        const apiBase = (window.API_BASE || 'http://localhost:4000');
+        const fd = new FormData();
+        fd.append('file', file);
+
+        try {
+          const resp = await fetch(`${apiBase}/api/upload`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('healid_token')}`
+            },
+            body: fd
+          });
+
+          if (!resp.ok) {
+            console.error('Upload failed', resp.statusText);
+            showToast('Échec de l\'upload de la photo', 'error');
+            return;
+          }
+
+          const json = await resp.json();
+          if (json && json.ok) {
+            showToast('Photo de profil mise à jour', 'success');
+            // refresh profile to pick up new avatarUrl and update header immediately
+            try { 
+              await loadPatientProfile();
+              // force header update after profile loads
+              setTimeout(() => {
+                try {
+                  const user = JSON.parse(localStorage.getItem('healid_user') || '{}');
+                  if (typeof window.updateUserProfile === 'function') {
+                    window.updateUserProfile(user);
+                  }
+                } catch(e) { /* ignore */ }
+              }, 100);
+            } catch(e) { /* ignore */ }
+          } else {
+            console.error('Upload response', json);
+            showToast('Réponse inattendue du serveur', 'error');
+          }
+        } catch (err) {
+          console.error('Erreur upload:', err);
+          showToast('Erreur réseau lors de l\'upload', 'error');
+        } finally {
+          // reset input so same file can be reselected if needed
+          fileInput.value = '';
+        }
+      });
+    })();
+
+    // Charger les données du profil au chargement de la page
+    document.addEventListener('DOMContentLoaded', async function() {
+      await loadPatientProfile();
+    });
+
+    async function loadPatientProfile() {
+      try {
+        const apiBase = (window.API_BASE || 'http://localhost:4000');
+        const response = await fetch(`${apiBase}/api/me`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('healid_token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.ok && data.patient) {
+          const patient = data.patient;
+          // update stored user and header if backend returned user info
+          try{
+            if(data.user){
+              localStorage.setItem('healid_user', JSON.stringify(data.user));
+              if(typeof updateUserProfile === 'function') try{ updateUserProfile(data.user); }catch(e){}
+            }
+          }catch(e){}
+
+          // Remplir les champs du formulaire
+          document.querySelector('[name="firstName"]').value = patient.firstName || '';
+          document.querySelector('[name="lastName"]').value = patient.lastName || '';
+          document.querySelector('[name="sexAtBirth"]').value = patient.sexAtBirth || '';
+          document.querySelector('[name="sexAtBirthDisplay"]').value = getSexDisplay(patient.sexAtBirth);
+          document.querySelector('[name="birthDate"]').value = patient.birthDate ? patient.birthDate.split('T')[0] : '';
+          document.querySelector('[name="birthDateDisplay"]').value = patient.birthDate ? patient.birthDate.split('T')[0] : '';
+          document.querySelector('[name="phone"]').value = patient.phone || '';
+          document.querySelector('[name="email"]').value = patient.email || '';
+          document.querySelector('[name="addressLine1"]').value = patient.addressLine1 || '';
+          document.querySelector('[name="city"]').value = patient.city || '';
+          document.querySelector('[name="postalCode"]').value = patient.postalCode || '';
+
+          // Informations médicales de base
+          document.querySelector('[name="heightCm"]').value = patient.heightCm || '';
+          document.querySelector('[name="weightKg"]').value = patient.weightKg || '';
+          document.querySelector('[name="bloodType"]').value = patient.bloodType || '';
+
+          // Allergies et antécédents
+          document.querySelector('[name="allergies"]').value = patient.allergies ? JSON.stringify(patient.allergies, null, 2) : '';
+          document.querySelector('[name="chronicConditions"]').value = patient.chronicConditions ? JSON.stringify(patient.chronicConditions, null, 2) : '';
+          document.querySelector('[name="familyHistory"]').value = patient.familyHistory ? JSON.stringify(patient.familyHistory, null, 2) : '';
+
+          // Traitements et vaccinations
+          document.querySelector('[name="currentMedications"]').value = patient.currentMedications ? JSON.stringify(patient.currentMedications, null, 2) : '';
+          document.querySelector('[name="vaccinations"]').value = patient.vaccinations ? JSON.stringify(patient.vaccinations, null, 2) : '';
+
+          // Afficher/masquer les champs selon le sexe
+          toggleSexSpecificFields(patient.sexAtBirth);
+
+          // Remplir les champs spécifiques aux femmes si applicable
+          if (patient.sexAtBirth === 'F') {
+            document.querySelector('[name="menarcheAge"]').value = patient.menarcheAge || '';
+            document.querySelector('[name="menstrualCycleRegular"]').value = patient.menstrualCycleRegular !== undefined ? patient.menstrualCycleRegular : '';
+            document.querySelector('[name="menstrualCycleLength"]').value = patient.menstrualCycleLength || '';
+            document.querySelector('[name="pregnantCurrent"]').value = patient.pregnantCurrent !== undefined ? patient.pregnantCurrent : '';
+            document.querySelector('[name="pregnancyDetails"]').value = patient.pregnancyDetails ? JSON.stringify(patient.pregnancyDetails, null, 2) : '';
+            document.querySelector('[name="gynecologicalHistory"]').value = patient.gynecologicalHistory ? JSON.stringify(patient.gynecologicalHistory, null, 2) : '';
+          }
+
+        } else {
+          showToast('Erreur lors du chargement du profil', 'error');
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du profil:', error);
+        showToast('Erreur réseau lors du chargement du profil', 'error');
+      }
+    }
+
+    function toggleSexSpecificFields(sex) {
+      const femaleFields = document.getElementById('female-specific-fields');
+      const maleFields = document.getElementById('male-specific-fields');
+
+      if (sex === 'F' && femaleFields) {
+        femaleFields.style.display = 'block';
+      } else if (femaleFields) {
+        femaleFields.style.display = 'none';
+      }
+
+      if (sex === 'M' && maleFields) {
+        maleFields.style.display = 'block';
+      } else if (maleFields) {
+        maleFields.style.display = 'none';
+      }
+    }
+  </script>
+</html>

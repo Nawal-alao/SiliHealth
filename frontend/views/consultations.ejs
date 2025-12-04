@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" class="site">
+    <div class="layout">
+      <nav class="sidebar" aria-label="Section navigation">
+        <a class="nav-item active" href="/consultations" aria-current="page">Liste des consultations</a>
+      </nav>
+      <div class="main">
+        <div class="card">
+          <h3>Liste des consultations</h3>
+          <table class="table"><thead><tr><th>Nom</th><th>Date</th><th>Statut</th><th>Médecin</th></tr></thead>
+            <tbody>
+              <tr><td>Jane Doe</td><td>2025-10-02</td><td>Terminée</td><td>Dr. Martin</td></tr>
+              <tr><td>Anne Dupont</td><td>2025-10-14</td><td>En attente</td><td>Dr. Leroy</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+</html>

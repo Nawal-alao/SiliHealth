@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accès d'Urgence - HealID</title>
+    <link rel="icon" href="/icons/healid-favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="fade-in">
+    <!-- Header intégré -->
+    <header class="header fade-in" role="banner" aria-label="HealID header">
+        <div class="logo" id="header-logo">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="2" y="2" width="20" height="20" rx="6" fill="#6B8CFF"/>
+            </svg>
+            <div class="brand">HealID</div>
+        </div>
+
+        <div class="emergency-banner">
+            <span class="emergency-indicator">🚨 MODE URGENCE 🚨</span>
+            <span class="emergency-timer" id="emergency-timer">05:00</span>
+        </div>
+
+        <div class="emergency-actions">
+            <button id="emergency-logout" class="btn btn--danger">Quitter urgence</button>
+        </div>
+    </header>
+
+    <main id="content" class="site">
+        <div class="emergency-container">
+            <div class="emergency-alert">
+                <h1>🚨 ACCÈS D'URGENCE ACTIVÉ</h1>
+                <p class="emergency-notice">
+                    <strong>Attention :</strong> Cet accès est limité aux situations d'urgence vitale uniquement.
+                    Toutes les actions sont journalisées et auditées.
+                </p>
+            </div>
+
+            <div class="emergency-form">
+                <h2>Rechercher un patient par ID</h2>
+                <div class="form-group">
+                    <label for="emergency-patient-id">ID Patient d'urgence :</label>
+                    <input
+                        type="text"
+                        id="emergency-patient-id"
+                        placeholder="Entrez l'ID patient..."
+                        aria-label="ID du patient pour accès d'urgence"
+                        autocomplete="off"
+                    >
+                    <button id="emergency-search-btn" class="btn btn--primary">
+                        Rechercher
+                    </button>
+                </div>
+            </div>
+
+            <div id="emergency-results" class="emergency-results" style="display: none;">
+                <h3>Informations d'urgence du patient</h3>
+                <div id="emergency-patient-info" class="emergency-patient-card">
+                    <!-- Les informations seront insérées ici par JavaScript -->
+                </div>
+            </div>
+
+            <div class="emergency-log">
+                <h3>Journal d'accès</h3>
+                <div id="emergency-log-entries" class="log-entries">
+                    <div class="log-entry">
+                        <span class="log-time">14:30:25</span>
+                        <span class="log-action">Accès d'urgence activé</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:4000';
+        const TOKEN_KEY = 'healid_token';
+
+        // Timer d'urgence (5 minutes)
+        let emergencyTimeLeft = 5 * 60; // 5 minutes en secondes
+
+        function updateEmergencyTimer() {
+            const minutes = Math.floor(emergencyTimeLeft / 60);
+            const seconds = emergencyTimeLeft % 60;
+            const timerEl = document.getElementById('emergency-timer');
+
+            if (timerEl) {
+                timerEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            if (emergencyTimeLeft <= 0) {
+                // Fin de la session d'urgence
+                alert('Session d\'urgence expirée. Vous allez être déconnecté.');
+                handleEmergencyLogout();
+            } else {
+                emergencyTimeLeft--;
+                setTimeout(updateEmergencyTimer, 1000);
+            }
+        }
+
+        function handleEmergencyLogout() {
+            // Nettoyer la session d'urgence
+            sessionStorage.removeItem('emergency_mode');
+            sessionStorage.removeItem('emergency_start');
+
+            // Déconnecter et rediriger
+            localStorage.removeItem(TOKEN_KEY);
+            window.location.href = '/login?message=Session urgence expirée';
+        }
+
+        async function searchEmergencyPatient() {
+            const patientId = document.getElementById('emergency-patient-id')?.value?.trim();
+
+            if (!patientId) {
+                alert('Veuillez entrer un ID patient');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/emergency/access/${patientId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        accessCode: '999999', // Code spécial pour urgence
+                        accessReason: 'Accès d\'urgence via interface dédiée'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.ok) {
+                    displayEmergencyPatientInfo(result.emergency);
+                    addLogEntry(`Patient ${patientId} consulté en urgence`);
+                } else {
+                    alert('Erreur: ' + (result.error || 'Patient non trouvé'));
+                }
+            } catch (error) {
+                console.error('Erreur accès urgence:', error);
+                alert('Erreur réseau lors de l\'accès au patient');
+            }
+        }
+
+        function displayEmergencyPatientInfo(emergency) {
+            const container = document.getElementById('emergency-patient-info');
+            const results = document.getElementById('emergency-results');
+
+            if (!container || !results) return;
+
+            container.innerHTML = `
+                <div class="emergency-patient-header">
+                    <h4>${emergency.patient.fullname}</h4>
+                    <span class="patient-id">ID: ${emergency.patient.patientId}</span>
+                </div>
+
+                <div class="emergency-vitals">
+                    <div class="vital-item">
+                        <strong>Groupe sanguin:</strong> ${emergency.criticalInfo.bloodType || 'Non spécifié'}
+                    </div>
+                    <div class="vital-item">
+                        <strong>Allergies:</strong> ${formatArray(emergency.criticalInfo.allergies) || 'Aucune'}
+                    </div>
+                    <div class="vital-item">
+                        <strong>Maladies chroniques:</strong> ${formatArray(emergency.criticalInfo.chronicConditions) || 'Aucune'}
+                    </div>
+                    <div class="vital-item">
+                        <strong>Médicaments actuels:</strong> ${formatArray(emergency.criticalInfo.currentMedications) || 'Aucun'}
+                    </div>
+                    <div class="vital-item">
+                        <strong>Contact d'urgence:</strong>
+                        ${emergency.criticalInfo.emergencyContact?.name || 'Non spécifié'}
+                        ${emergency.criticalInfo.emergencyContact?.phone ? `<br>Tél: ${emergency.criticalInfo.emergencyContact.phone}` : ''}
+                    </div>
+                    <div class="vital-item">
+                        <strong>Grossesse:</strong> ${emergency.criticalInfo.pregnantCurrent ? 'Oui' : 'Non'}
+                    </div>
+                </div>
+
+                <div class="emergency-access-info">
+                    <p><strong>Accès effectué le:</strong> ${new Date(emergency.accessedAt).toLocaleString()}</p>
+                    <p><strong>Agent:</strong> ${emergency.agent.licenseNumber}</p>
+                    <p><strong>Raison:</strong> ${emergency.accessReason}</p>
+                </div>
+            `;
+
+            results.style.display = 'block';
+        }
+
+        function formatArray(data) {
+            if (!data) return null;
+            if (typeof data === 'string') {
+                try {
+                    data = JSON.parse(data);
+                } catch (e) {
+                    return data;
+                }
+            }
+            if (Array.isArray(data)) {
+                return data.map(item => typeof item === 'object' ? item.name || item.medication || item.condition || JSON.stringify(item) : item).join(', ');
+            }
+            return data;
+        }
+
+        function addLogEntry(action) {
+            const logContainer = document.getElementById('emergency-log-entries');
+            if (!logContainer) return;
+
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-time">${timeString}</span>
+                <span class="log-action">${action}</span>
+            `;
+
+            logContainer.insertBefore(logEntry, logContainer.firstChild);
+
+            // Garder seulement les 10 dernières entrées
+            while (logContainer.children.length > 10) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚨 Page accès d\'urgence chargée');
+
+            // Vérifier l'autorisation
+            const token = localStorage.getItem(TOKEN_KEY);
+            if (!token) {
+                alert('Accès non autorisé');
+                window.location.href = '/login';
+                return;
+            }
+
+            // Démarrer le timer
+            updateEmergencyTimer();
+
+            // Événements
+            const searchBtn = document.getElementById('emergency-search-btn');
+            const patientInput = document.getElementById('emergency-patient-id');
+            const logoutBtn = document.getElementById('emergency-logout');
+            const logo = document.getElementById('header-logo');
+
+            if (searchBtn) {
+                searchBtn.addEventListener('click', searchEmergencyPatient);
+            }
+
+            if (patientInput) {
+                patientInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        searchEmergencyPatient();
+                    }
+                });
+            }
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleEmergencyLogout);
+            }
+
+            if (logo) {
+                logo.addEventListener('click', () => window.location.href = '/dashboard-agent');
+                logo.style.cursor = 'pointer';
+            }
+
+            addLogEntry('Session d\'urgence démarrée');
+        });
+    </script>
+
+    <style>
+        .emergency-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .emergency-banner {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 700;
+            animation: pulse 2s infinite;
+        }
+
+        .emergency-indicator {
+            font-size: 14px;
+        }
+
+        .emergency-timer {
+            font-size: 18px;
+            font-weight: 900;
+        }
+
+        .emergency-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .emergency-alert {
+            background: rgba(239,68,68,0.1);
+            border: 2px solid #ef4444;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        .emergency-alert h1 {
+            color: #dc2626;
+            margin: 0 0 16px 0;
+            font-size: 24px;
+        }
+
+        .emergency-notice {
+            color: #dc2626;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .emergency-form {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 32px;
+        }
+
+        .emergency-form h2 {
+            margin: 0 0 20px 0;
+            color: var(--text);
+        }
+
+        .form-group {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .form-group label {
+            flex: 1;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            flex: 2;
+            padding: 12px;
+            border: 1px solid rgba(14,23,34,0.12);
+            border-radius: 8px;
+        }
+
+        .emergency-results {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 32px;
+        }
+
+        .emergency-patient-card {
+            background: rgba(107,140,255,0.05);
+            border: 1px solid rgba(107,140,255,0.2);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .emergency-patient-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(14,23,34,0.08);
+        }
+
+        .emergency-patient-header h4 {
+            margin: 0;
+            color: var(--text);
+        }
+
+        .patient-id {
+            background: var(--brand-500);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .emergency-vitals {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .vital-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(14,23,34,0.08);
+        }
+
+        .vital-item strong {
+            color: var(--brand-500);
+        }
+
+        .emergency-access-info {
+            background: rgba(239,68,68,0.05);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 14px;
+        }
+
+        .emergency-log {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .emergency-log h3 {
+            margin: 0 0 16px 0;
+        }
+
+        .log-entries {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(14,23,34,0.04);
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .log-action {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+            100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+        }
+
+        @media (max-width: 768px) {
+            .emergency-banner {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .form-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .emergency-vitals {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>

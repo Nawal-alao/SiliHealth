@@ -1,0 +1,69 @@
+name: E2E Playwright Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        ports: ['5433:5432']
+        env:
+          POSTGRES_DB: healid
+          POSTGRES_USER: healid
+          POSTGRES_PASSWORD: healid_secure_password_123
+        options: >-
+          --health-cmd "pg_isready -U healid" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies (backend)
+        run: |
+          cd backend
+          npm ci
+
+      - name: Run backend
+        run: |
+          cd backend
+          DATABASE_URL="postgresql://healid:healid_secure_password_123@localhost:5433/healid" npm run start:dev &
+          sleep 6
+
+      - name: Install dependencies (frontend)
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run frontend
+        run: |
+          cd frontend
+          npm run dev &
+          sleep 4
+
+      - name: Install playwright & axe-core (e2e)
+        run: |
+          cd e2e
+          npm init -y
+          npm i -D @playwright/test axe-core
+          npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: |
+          cd e2e
+          npx playwright test --config=playwright.config.js --reporter=list
+        # upload artifacts on failure
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: e2e/artifacts

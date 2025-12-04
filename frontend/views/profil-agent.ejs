@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" class="site">
+    <div class="card" style="max-width: 800px; margin: 0 auto;">
+      <h3>Mon Profil Agent de Santé</h3>
+
+      <form id="profile-form" data-validate data-api="/api/agents/profile" method="put">
+        <h4>Informations personnelles</h4>
+
+        <div class="row">
+          <div class="col">
+            <label>Prénom<input class="input" name="firstName" required></label>
+          </div>
+          <div class="col">
+            <label>Nom<input class="input" name="lastName" required></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label>Email<input type="email" class="input" name="email" required></label>
+          </div>
+          <div class="col">
+            <label>Téléphone professionnel<input type="tel" class="input" name="phone" placeholder="+33123456789"></label>
+          </div>
+        </div>
+
+        <h4>Informations professionnelles</h4>
+
+        <div class="row">
+          <div class="col">
+            <label>Spécialité
+              <select class="input" name="specialty" required>
+                <option value="">Sélectionnez une spécialité</option>
+                <option value="Médecine générale">Médecine générale</option>
+                <option value="Pédiatrie">Pédiatrie</option>
+                <option value="Gynécologie">Gynécologie</option>
+                <option value="Cardiologie">Cardiologie</option>
+                <option value="Dermatologie">Dermatologie</option>
+                <option value="Ophtalmologie">Ophtalmologie</option>
+                <option value="ORL">ORL</option>
+                <option value="Psychiatrie">Psychiatrie</option>
+                <option value="Radiologie">Radiologie</option>
+                <option value="Infirmier">Infirmier</option>
+                <option value="Sage-femme">Sage-femme</option>
+                <option value="Autre">Autre</option>
+              </select>
+            </label>
+          </div>
+          <div class="col">
+            <label>Numéro de licence<input type="text" class="input" name="licenseNumber" placeholder="Ex: MED123456"></label>
+          </div>
+        </div>
+
+        <label>Service/Département<input type="text" class="input" name="department" placeholder="Ex: Médecine interne"></label>
+
+        <h4>Adresse professionnelle</h4>
+
+        <label>Nom de l'établissement<input type="text" class="input" name="institutionName" placeholder="Hôpital, Clinique, Cabinet"></label>
+
+        <label>Adresse<input type="text" class="input" name="addressLine1" placeholder="Numéro et rue"></label>
+
+        <div class="row">
+          <div class="col">
+            <label>Ville<input type="text" class="input" name="city"></label>
+          </div>
+          <div class="col">
+            <label>Code postal<input type="text" class="input" name="postalCode" pattern="[0-9]{5}" placeholder="75001"></label>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px;">
+          <button type="submit" class="btn btn--primary">Mettre à jour mon profil</button>
+        </div>
+      </form>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+      const token = localStorage.getItem('healid_token');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+
+      // Charger les données de l'agent
+      try {
+        const response = await fetch('http://localhost:4000/api/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.ok && data.agent) {
+            populateForm(data.agent);
+          }
+        } else if (response.status === 401) {
+          localStorage.removeItem('healid_token');
+          localStorage.removeItem('healid_user');
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du profil:', error);
+      }
+    });
+
+    function populateForm(agent) {
+      // Informations de base (du user)
+      const user = JSON.parse(localStorage.getItem('healid_user') || '{}');
+      document.querySelector('[name="firstName"]').value = user.fullname ? user.fullname.split(' ')[0] : '';
+      document.querySelector('[name="lastName"]').value = user.fullname ? user.fullname.split(' ').slice(1).join(' ') : '';
+      document.querySelector('[name="email"]').value = user.email || '';
+
+      // Informations professionnelles
+      document.querySelector('[name="specialty"]').value = agent.specialty || '';
+      document.querySelector('[name="licenseNumber"]').value = agent.licenseNumber || '';
+      document.querySelector('[name="department"]').value = agent.department || '';
+      document.querySelector('[name="phone"]').value = agent.phone || '';
+
+      // Adresse professionnelle (si disponible dans les données étendues)
+      document.querySelector('[name="institutionName"]').value = agent.institutionName || '';
+      document.querySelector('[name="addressLine1"]').value = agent.addressLine1 || '';
+      document.querySelector('[name="city"]').value = agent.city || '';
+      document.querySelector('[name="postalCode"]').value = agent.postalCode || '';
+    }
+  </script>
+</html>

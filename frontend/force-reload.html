@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic HealID</title>
+    <style>
+           body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 4px;
+        }
+        .status.ok { background: #10b981; color: white; }
+        .status.error { background: #ef4444; color: white; }
+        .status.warning { background: #f59e0b; color: white; }
+        button {
+            background: #6B8CFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 8px 4px;
+        }
+        button:hover { background: #5B74E6; }
+        pre {
+            background: #f0f0f0;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+        <h1>🔍 Diagnostic HealID</h1>
+    
+    <div class="card">
+        <h2>1. Vérification des serveurs</h2>
+        <div id="server-status">Vérification en cours...</div>
+    </div>
+
+    <div class="card">
+        <h2>2. Vérification des fichiers modifiés</h2>
+        <div id="files-status">Vérification en cours...</div>
+    </div>
+
+    <div class="card">
+        <h2>3. Test du mode sombre</h2>
+        <button onclick="testDarkMode()">Tester le toggle dark mode</button>
+        <div id="dark-mode-status"></div>
+    </div>
+
+    <div class="card">
+        <h2>4. Test de la page QR Access</h2>
+        <button onclick="testQRAccess()">Tester /qr-access</button>
+        <div id="qr-access-status"></div>
+    </div>
+
+    <div class="card">
+        <h2>5. Actions de réparation</h2>
+        <button onclick="clearCache()">Vider le cache du navigateur</button>
+        <button onclick="reloadPage()">Recharger la page</button>
+        <button onclick="checkLocalStorage()">Vérifier localStorage</button>
+        <div id="repair-status"></div>
+    </div>
+
+    <div class="card">
+        <h2>6. Informations système</h2>
+        <pre id="system-info"></pre>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:4000';
+
+        // Vérifier les serveurs
+        async function checkServers() {
+            const statusDiv = document.getElementById('server-status');
+            let html = '';
+
+            // Frontend
+            try {
+                const frontendRes = await fetch('http://localhost:3000/');
+                if (frontendRes.ok) {
+                    html += '<span class="status ok">Frontend (port 3000): OK</span>';
+                } else {
+                    html += '<span class="status error">Frontend (port 3000): Erreur ' + frontendRes.status + '</span>';
+                }
+            } catch (e) {
+                html += '<span class="status error">Frontend (port 3000): Non accessible</span>';
+            }
+
+            // Backend
+            try {
+                const backendRes = await fetch(API_BASE + '/api/patients');
+                if (backendRes.status === 401 || backendRes.status === 200) {
+                    html += '<span class="status ok">Backend (port 4000): OK</span>';
+                } else {
+                    html += '<span class="status warning">Backend (port 4000): Répond mais erreur ' + backendRes.status + '</span>';
+                }
+            } catch (e) {
+                html += '<span class="status error">Backend (port 4000): Non accessible</span>';
+            }
+
+            statusDiv.innerHTML = html;
+        }
+
+        // Vérifier les fichiers
+        async function checkFiles() {
+            const statusDiv = document.getElementById('files-status');
+            let html = '';
+
+            // Vérifier main.js
+            try {
+                const res = await fetch('/js/main.js');
+                const text = await res.text();
+                if (text.includes('applyTheme')) {
+                    html += '<span class="status ok">main.js: Fonction applyTheme présente</span>';
+                } else {
+                    html += '<span class="status error">main.js: Fonction applyTheme manquante</span>';
+                }
+                if (text.includes('qr-access')) {
+                    html += '<span class="status ok">main.js: Référence qr-access présente</span>';
+                }
+            } catch (e) {
+                html += '<span class="status error">main.js: Non accessible</span>';
+            }
+
+            // Vérifier qr-access.ejs
+            try {
+                const res = await fetch('/qr-access/test-patient-id');
+                if (res.status === 200 || res.status === 404) {
+                    html += '<span class="status ok">Route /qr-access: Configurée</span>';
+                } else {
+                    html += '<span class="status warning">Route /qr-access: Statut ' + res.status + '</span>';
+                }
+            } catch (e) {
+                html += '<span class="status error">Route /qr-access: Erreur</span>';
+            }
+
+            statusDiv.innerHTML = html;
+        }
+
+        // Tester le dark mode
+        function testDarkMode() {
+            const statusDiv = document.getElementById('dark-mode-status');
+            const current = localStorage.getItem('healid_theme') || 'light';
+            const next = current === 'dark' ? 'light' : 'dark';
+        
+            localStorage.setItem('healid_theme', next);
+            document.body.classList.toggle('dark');
+            
+            statusDiv.innerHTML = `
+                <span class="status ok">Thème changé: ${next}</span>
+                <p>Si le thème ne change pas visuellement, vérifiez le CSS.</p>
+            `;
+        }
+
+        // Tester QR access
+        async function testQRAccess() {
+            const statusDiv = document.getElementById('qr-access-status');
+            statusDiv.innerHTML = 'Test en cours...';
+
+            try {
+                const res = await fetch('/qr-access/test-id-123');
+                if (res.ok) {
+                    statusDiv.innerHTML = '<span class="status ok">Route /qr-access fonctionne</span>';
+                } else {
+                    statusDiv.innerHTML = '<span class="status warning">Route /qr-access: ' + res.status + '</span>';
+                }
+            } catch (e) {
+                statusDiv.innerHTML = '<span class="status error">Erreur: ' + e.message + '</span>';
+            }
+        }
+
+        // Vider le cache
+        function clearCache() {
+            const statusDiv = document.getElementById('repair-status');
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => caches.delete(name));
+                });
+            }
+            localStorage.clear();
+            sessionStorage.clear();
+            statusDiv.innerHTML = '<span class="status ok">Cache et localStorage vidés. Rechargez la page.</span>';
+        }
+
+        // Recharger
+        function reloadPage() {
+            window.location.reload(true);
+        }
+
+        // Vérifier localStorage
+        function checkLocalStorage() {
+            const statusDiv = document.getElementById('repair-status');
+                const theme = localStorage.getItem('healid_theme');
+                const token = localStorage.getItem('healid_token');
+                const user = localStorage.getItem('healid_user');
+
+            let html = '<h3>Contenu localStorage:</h3><ul>';
+            html += '<li>Theme: ' + (theme || 'non défini') + '</li>';
+            html += '<li>Token: ' + (token ? 'présent (' + token.substring(0, 20) + '...)' : 'absent') + '</li>';
+            html += '<li>User: ' + (user ? 'présent' : 'absent') + '</li>';
+            html += '</ul>';
+
+            statusDiv.innerHTML = html;
+        }
+
+        // Informations système
+        function showSystemInfo() {
+            const infoDiv = document.getElementById('system-info');
+            const info = {
+                userAgent: navigator.userAgent,
+                url: window.location.href,
+                timestamp: new Date().toISOString(),
+                localStorage: {
+                    theme: localStorage.getItem('healid_theme'),
+                    hasToken: !!localStorage.getItem('healid_token'),
+                    hasUser: !!localStorage.getItem('healid_user')
+                },
+                bodyClasses: document.body.className,
+                darkModeActive: document.body.classList.contains('dark')
+            };
+            infoDiv.textContent = JSON.stringify(info, null, 2);
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            checkServers();
+            checkFiles();
+            showSystemInfo();
+        });
+    </script>
+</body>
+</html>

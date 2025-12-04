@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" role="main" class="site layout">
+    <nav class="sidebar" aria-label="Section navigation">
+      <a class="nav-item active" href="/permissions" aria-current="page">Permissions</a>
+    </nav>
+    <div class="main">
+      <div class="card">
+        <h3>Patientes autorisées</h3>
+        <ul class="muted"><li>Jane Doe — <button type="button" class="btn btn--secondary">Retirer</button></li></ul>
+        <h4 style="margin-top:12px">Ajouter accès</h4>
+        <div class="row"><label style="flex:1"><input class="input" placeholder="Email de la patiente"></label><button type="button" class="btn">Ajouter</button></div>
+      </div>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+</html>

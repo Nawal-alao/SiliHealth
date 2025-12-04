@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" role="main" class="site">
+    <div class="card" style="max-width:720px">
+      <h3>Assistance</h3>
+      <form data-validate>
+        <label>Votre email<input class="input" name="email" required></label>
+        <label>Sujet<input class="input" name="subject" required></label>
+        <label>Message<textarea class="input" rows="4" required></textarea></label>
+        <div style="margin-top:12px"><button type="submit" class="btn">Envoyer</button></div>
+      </form>
+      <section style="margin-top:18px">
+        <h4>FAQ</h4>
+        <div class="card-compact"><strong>Comment sont protégées mes données ?</strong><div class="muted">Chiffrement en transit et au repos (exemple).</div></div>
+      </section>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+</html>

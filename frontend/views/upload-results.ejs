@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="fr">
+  <%-  include('./partials/header.ejs') %>
+  <main id="content" role="main" class="site">
+    <div class="card">
+      <h3>Uploader des résultats</h3>
+      <form enctype="multipart/form-data" data-api="/api/upload" method="post">
+        <label>Upload PDF<input name="files" type="file" accept="application/pdf" onchange="previewFiles(this,'#preview')"></label>
+        <label>Upload images<input name="files" type="file" accept="image/*" multiple onchange="previewFiles(this,'#preview')"></label>
+        <label>Commentaire<textarea class="input" name="comment"></textarea></label>
+        <div id="preview" class="preview"></div>
+        <div style="margin-top:12px"><button class="btn" type="submit">Valider</button></div>
+      </form>
+    </div>
+  </main>
+  <%-  include('./partials/footer.ejs') %>
+</html>
