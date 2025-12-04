@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "e2e:playwright": "(cd ../e2e && npx playwright test --project=chromium)",
     "e2e:api": "bash ../scripts/run-e2e.sh",
-    "lint": "echo 'no linter configured'"
+    "lint": "echo 'no linter configured'",
+    "build": "webpack --mode production",
+    "deploy": "vercel --prod"
   },
   "author": "HealID",
   "license": "MIT",
@@ -25,6 +27,7 @@
     "nodemon": "^2.0.22",
     "vitest": "^1.0.0",
     "@playwright/test": "^1.35.0",
-    "axe-core": "^4.8.0"
+    "axe-core": "^4.8.0",
+    "webpack": "^5.0.0"
   }
 }
