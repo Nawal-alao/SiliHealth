@@ -47,9 +47,9 @@ async function bootstrap() {
   }catch(e){ logger.warn('fastify static registration failed', (e as any)?.stack || e); }
   // enable global validation
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-  const port = process.env.PORT || 4000;
+  const port = parseInt(process.env.PORT || '4000', 10);
   await app.listen(port, '0.0.0.0');
-  logger.log(`HealID backend running at http://localhost:${port}`);
+  logger.log(`HealID backend running on port ${port}`);
 }
 
 bootstrap();
