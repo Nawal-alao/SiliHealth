@@ -4,6 +4,12 @@ const compression = require('compression');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Backend URL configuration for Railway deployment
+// In production (Railway): use BACKEND_URL environment variable
+// In development: use localhost
+const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+const nodeEnv = process.env.NODE_ENV || 'development';
+
 // Enable compression for faster responses
 app.use(compression());
 
@@ -75,6 +81,15 @@ app.get('/emergency-access', (req, res) => {
 
 app.get('/force-reload.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'force-reload.html'));
+});
+
+// API Configuration endpoint for frontend to get backend URL
+app.get('/api/config', (req, res) => {
+  res.json({
+    apiBase: backendUrl,
+    environment: nodeEnv,
+    version: '1.0.0'
+  });
 });
 
 // Serve manifest, service worker and offline page from project public folder

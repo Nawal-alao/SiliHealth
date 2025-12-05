@@ -114,6 +114,42 @@ docker-compose up -d
 npm run dev
 ```
 
+## 🚀 Déploiement sur Railway + Neon
+
+SiliHealth est configurée pour un déploiement facile sur Railway avec une base de données Neon PostgreSQL.
+
+### 📚 Guide Rapide
+
+**Pour déployer rapidement en 5 minutes:**
+→ Consultez **[RAILWAY_QUICK_START.md](./RAILWAY_QUICK_START.md)**
+
+**Pour un guide détaillé complet:**
+→ Consultez **[DEPLOYMENT_RAILWAY_NEON.md](./DEPLOYMENT_RAILWAY_NEON.md)**
+
+### Architecture de Déploiement
+
+```
+Railway Projet A          Railway Projet B          Neon
+(Backend NestJS)    ←→    (Frontend Express)  ←→   (PostgreSQL)
+backend.railway.app       frontend.railway.app      Database
+```
+
+### Variables d'Environnement Requises
+
+**Backend (Railway Projet A):**
+```env
+DATABASE_URL=postgresql://...  # Depuis Neon
+JWT_SECRET=votre_secret_jwt
+NODE_ENV=production
+FRONTEND_URL=https://frontend-production-xxxx.railway.app
+```
+
+**Frontend (Railway Projet B):**
+```env
+NODE_ENV=production
+BACKEND_URL=https://backend-production-xxxx.railway.app
+```
+
 ## 🎯 Fonctionnalités Principales
 
 ### 👤 Authentification & Profils

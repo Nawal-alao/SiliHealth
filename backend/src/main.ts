@@ -12,8 +12,22 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
   
   // enable CORS FIRST (before other plugins) for frontend dev server and file uploads
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:4000',
+    'http://127.0.0.1:4000',
+    process.env.FRONTEND_URL || 'https://localhost:3000' // Railway frontend URL
+  ];
+  
   app.enableCors({ 
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:4000', 'http://127.0.0.1:4000'],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || /railway\.app$/.test(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

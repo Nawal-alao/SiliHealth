@@ -1,9 +1,26 @@
 // Global config and storage keys (available to all functions)
-const API_BASE = 'http://localhost:4000';
+let API_BASE = 'http://localhost:4000';
 const TOKEN_KEY = 'healid_token';
 const USER_KEY = 'healid_user';
-// expose globals for inline handlers
-try{ window.API_BASE = API_BASE; window.TOKEN_KEY = TOKEN_KEY; window.USER_KEY = USER_KEY; }catch(e){}
+
+// Initialize API_BASE from server config
+async function initializeApiBase() {
+  try {
+    const response = await fetch('/api/config');
+    if (response.ok) {
+      const config = await response.json();
+      API_BASE = config.apiBase;
+      console.log('📡 API_BASE loaded:', API_BASE);
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not load API config, using default:', API_BASE, error);
+  }
+  // expose globals for inline handlers
+  try { window.API_BASE = API_BASE; window.TOKEN_KEY = TOKEN_KEY; window.USER_KEY = USER_KEY; } catch (e) { }
+}
+
+// Call initialization first
+initializeApiBase();
 
 document.addEventListener('DOMContentLoaded', function(){
   console.log('🎯 DOM Content Loaded - Initialisation HealID');
